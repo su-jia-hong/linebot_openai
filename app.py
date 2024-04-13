@@ -32,8 +32,8 @@ def GPT_response(text):
         response = openai.Completion.create(
             model="ft:davinci-002:personal:test1:9CcruKZv",  # 這裡替換為您的微調模型ID
             prompt=text,
-            temperature=0.5,
-            max_tokens=250
+            temperature=1.0,
+            max_tokens=20
         )
         # 處理回應
         answer = response.choices[0].text.strip()  # .strip() 移除前後空格和換行
