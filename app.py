@@ -30,7 +30,7 @@ def GPT_response(text):
     try:
         # 使用您的微調模型ID作為 model 參數的值
         response = openai.Completion.create(
-            model="ftjob-uTjK1NdfVI6ZkNz535UpAVwU",  # 這裡替換為您的微調模型ID
+            model="ft:gpt-3.5-turbo-0125:personal:0418:9FMpdOGW",  # 這裡替換為您的微調模型ID
             prompt=text,
             temperature=1.0,
             max_tokens=20
