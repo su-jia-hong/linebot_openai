@@ -72,16 +72,16 @@ def handle_message(event):
     except:
         print(traceback.format_exc())
         line_bot_api.reply_message(event.reply_token, TextSendMessage('你所使用的OPENAI API key額度可能已經超過，請於後台Log內確認錯誤訊息'))
-
-    if(message == '店家資訊'):
-        FlexMessage = json.load(open('card.json','r',encoding='utf-8'))
-        line_bot_api.reply_message(reply_token, FlexSendMessage('profile',FlexMessage))
         
 
 @handler.add(PostbackEvent)
 def handle_message(event):
     print(event.postback.data)
-
+    if(message == '店家資訊'):
+        FlexMessage = json.load(open('card.json','r',encoding='utf-8'))
+        line_bot_api.reply_message(reply_token, FlexSendMessage('profile',FlexMessage))
+    else:
+        line_bot_api.reply_message(reply_token, TextSendMessage(text=message))
 
 @handler.add(MemberJoinedEvent)
 def welcome(event):
@@ -91,7 +91,7 @@ def welcome(event):
     name = profile.display_name
     message = TextSendMessage(text=f'{name}歡迎加入')
     line_bot_api.reply_message(event.reply_token, message)
-        
+    
         
 import os
 if __name__ == "__main__":
