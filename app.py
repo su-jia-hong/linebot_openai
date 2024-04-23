@@ -12,6 +12,7 @@ from linebot.models import *
 import tempfile, os
 import datetime
 import openai
+import json
 import time
 import traceback
 #======python的函數庫==========
@@ -44,6 +45,10 @@ def GPT_response(text):
         return "出現錯誤，請稍後再試。"
 
 
+    if(message == '店家資訊'):
+        FlexMessage = json.load(open('card.json','r',encoding='utf-8'))
+        line_bot_api.reply_message(reply_token, FlexSendMessage('profile',FlexMessage))
+        
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
