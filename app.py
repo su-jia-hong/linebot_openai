@@ -64,9 +64,6 @@ def callback():
 # 處理訊息
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    message_type = event.message.type
-    user_id = event.source.user_id
-    reply_token = event.reply_token
     msg = event.message.text
     try:
         GPT_answer = GPT_response(msg)
