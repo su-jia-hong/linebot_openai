@@ -35,6 +35,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 #     answer = response['choices'][0]['text'].replace('。','')
 #     return answer
 def GPT_response(text):
+    client = OpenAI()
     completion = client.chat.completions.create(
         model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
         messages=[
