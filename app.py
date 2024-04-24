@@ -39,7 +39,7 @@ def GPT_response(text):
         model="ft:gpt-3.5-turbo:my-org:custom_suffix:id",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello!"}
+            {"role": "user", "content": text}
         ]
     )
     answer = completion.choices[0].message.content
