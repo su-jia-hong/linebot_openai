@@ -7,7 +7,7 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import *
-
+from openai import OpenAI
 #======python的函數庫==========
 import tempfile, os
 import datetime
@@ -73,11 +73,11 @@ def handle_message(event):
     except:
         print(traceback.format_exc())
         line_bot_api.reply_message(event.reply_token, TextSendMessage('你所使用的OPENAI API key額度可能已經超過，請於後台Log內確認錯誤訊息'))
-    if(message == '店家資訊'):
-        FlexMessage = json.load(open('card.json','r',encoding='utf-8'))
-        line_bot_api.reply_message(reply_token, FlexSendMessage('店家資訊',FlexMessage))
-    else:
-        line_bot_api.reply_message(reply_token, TextSendMessage(text=message))
+    # if(message == '店家資訊'):
+    #     FlexMessage = json.load(open('card.json','r',encoding='utf-8'))
+    #     line_bot_api.reply_message(reply_token, FlexSendMessage('店家資訊',FlexMessage))
+    # else:
+    #     line_bot_api.reply_message(reply_token, TextSendMessage(text=message))
 
 @handler.add(PostbackEvent)
 def handle_message(event):
