@@ -39,10 +39,11 @@ def GPT_response(text):
     completion = client.chat.completions.create(
       model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
       messages=[
-        {"role": "system", "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."},
+        {"role": "system", "content": "商品價格"},
         {"role": "user", "content": text}
       ]
     )
+    print(completion.choices[0].message)
     print(completion.choices[0].message.content)
     answer = completion.choices[0].message.content
     return answer
