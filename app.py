@@ -11,7 +11,7 @@ from openai import OpenAI
 #======python的函數庫==========
 import tempfile, os
 import datetime
-import openai
+# import openai
 import json
 import time
 import traceback
