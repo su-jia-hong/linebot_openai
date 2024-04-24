@@ -34,9 +34,9 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 #     answer = response['choices'][0]['text'].replace('。','')
 #     return answer
 def GPT_response(text):
-    #client = openai()
+    client = openai.Completion.create(model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP", prompt=text, temperature=0.5, max_tokens=50)
     #completion = client.chat.completions.create(
-    completion = openai.Completion.create(
+    completion = client.chat.completions.create(
         model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
