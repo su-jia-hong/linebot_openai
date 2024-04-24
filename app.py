@@ -36,7 +36,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 #     return answer
 def GPT_response(text):
     completion = client.chat.completions.create(
-        model="ft:gpt-3.5-turbo:my-org:custom_suffix:id",
+        model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": text}
