@@ -7,11 +7,11 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import *
-#from openai import OpenAI
+from openai import OpenAI
 #======python的函數庫==========
 import tempfile, os
 import datetime
-import openai
+#import openai
 import json
 import time
 import traceback
@@ -28,14 +28,25 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def GPT_response(text):
     # 接收回應
-    response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt=text, temperature=0.5, max_tokens=50)
-    print(response)
-    # 重組回應
-    answer = response['choices'][0]['text'].replace('。','')
-    print(answer+"answer//////////////////////////")
+    # response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt=text, temperature=0.5, max_tokens=50)
+    # print(response)
+    # # 重組回應
+    # answer = response['choices'][0]['text'].replace('。','')
+    # print(answer+"answer//////////////////////////")
+    # return answer
+    client = OpenAI()
+    
+    completion = client.chat.completions.create(
+      model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
+      messages=[
+        {"role": "system", "content": "You are a poetic assistant, skilled in explaining complex programming concepts with creative flair."},
+        {"role": "user", "content": text}
+      ]
+    )
+    print(completion.choices[0].message.content)
+    answer = completion.choices[0].message.content
     return answer
 
-        
 # 監聽所有來自 /callback 的 Post Request
 @app.route("/callback", methods=['POST'])
 def callback():
