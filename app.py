@@ -7,11 +7,11 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import *
-from openai import OpenAI
+#from openai import OpenAI
 #======python的函數庫==========
 import tempfile, os
 import datetime
-# import openai
+import openai
 import json
 import time
 import traceback
@@ -34,7 +34,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 #     answer = response['choices'][0]['text'].replace('。','')
 #     return answer
 def GPT_response(text):
-    client = OpenAI()
+    client = openai()
     completion = client.chat.completions.create(
         model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
         messages=[
