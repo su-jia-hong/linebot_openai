@@ -28,21 +28,12 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 def GPT_response(text):
-    try:
-        # 使用您的微調模型ID作為 model 參數的值
-        response = openai.Completion.create(
-            model="ft:davinci-002:personal::9GniBy2i",  # 這裡替換為您的微調模型ID
-            prompt=text,
-            temperature=1.0,
-            max_tokens=20
-        )
-        # 處理回應
-        answer = response.choices[0].text.strip()  # .strip() 移除前後空格和換行
-        return answer
-    except Exception as e:
-        # 處理例外情況
-        print(f"Error: {e}")
-        return "出現錯誤，請稍後再試。"
+    # 接收回應
+    response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt=text, temperature=0.5, max_tokens=500)
+    print(response)
+    # 重組回應
+    answer = response['choices'][0]['text'].replace('。','')
+    return answer
 
         
 # 監聽所有來自 /callback 的 Post Request
