@@ -45,7 +45,7 @@ def GPT_response(text):
         },
         {
           "role": "user",
-          "content": msg
+          "content": text
         },
         {
           "role": "assistant",
