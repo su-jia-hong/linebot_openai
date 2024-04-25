@@ -38,9 +38,19 @@ def GPT_response(text):
     
     completion = client.chat.completions.create(
       model="ft:gpt-3.5-turbo-1106:personal:coffee:9HTIW0HP",
-      messages=[
-        {"role": "system", "content": "商品價格"},
-        {"role": "user", "content": text}
+      messages = [
+        {
+          "role": "system",
+          "content": "你現在學校內部咖啡廳的店員"
+        },
+        {
+          "role": "user",
+          "content": msg
+        },
+        {
+          "role": "assistant",
+          "content": "我們咖啡廳提供以下飲品和甜點：\n咖啡類：\n- 濃縮咖啡/美式咖啡 Espresso/Americano: $70\n- 卡布奇諾 Cappuccino: $80\n- 拿鐵 Latte: $90\n- 白咖啡 Flat white: $90\n- 1+1 美式咖啡+拿鐵 Americano & Latte: $100\n- 風味拿鐵（榛果/焦糖/香草/黑糖/蜂蜜/抹茶/摩卡）Flavored Latte: $100\n奶蓋茶類：\n- 奶蓋（榛果/焦糖/香草/黑糖/蜂蜜/抹茶/可可）Au Lait: $90\n可可類：\n- 可可（榛果/焦糖/香草/黑糖/蜂蜜）Cocoa: $100\n氣泡飲料類：\n- 氣泡飲料（玫瑰蜂蜜/蘋果/柚子）Sparkling Drink: $90\n茶類：\n- 茶（紅茶/綠茶/伯爵/玫瑰/蘋果/柚子）Tea: $90\n鮮奶茶類：\n- 鮮奶茶（紅茶/綠茶/伯爵）Milk Tea: $90\n厚片類：\n- 厚片（巧克力/花生/奶油/綠茶/披薩+25）Thick Toast: $40\n帕尼尼三明治類：\n- 帕尼尼三明治（蘑菇青醬/義大利火腿/泰式辣豬肉/巧克力棉花糖）Panini Sandwich: $80\n甜點類：\n- 布朗尼 Brownie: $60\n- 磅蛋糕 Pound cake: $60\n- 瑪德蓮 Madeleine: $60\n- 巴斯克起司蛋糕 Basque cheesecake: $70\n歡迎選購！"
+        }
       ]
     )
     print(completion.choices[0].message)
