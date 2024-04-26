@@ -45,12 +45,11 @@ def GPT_response(text):
     # print(answer+"answer//////////////////////////")
     # return answer
     client = OpenAI()
-    model="gpt-3.5-turbo"
     info_from_csv = data[['種類','品項','價格','標籤']]
     info_str = f"Category: {info_from_csv['種類']}, Item: {info_from_csv['品項']}, Price: {info_from_csv['價格']}, Tag: {info_from_csv['標籤']}"
     completion = client.chat.completions.create(
+      model="gpt-3.5-turbo",
     
-        
       messages=[
         {"role": "system", "content": "你是一個線上咖啡廳點餐助手 "},
         {"role": "system", "content": "answer the question considering the following data: " + info_str},
