@@ -55,6 +55,7 @@ def GPT_response(text):
         {"role": "system", "content": "answer the question considering the following data: " + info_str},
         {"role": "user", "content": msg},
       ]
+    )
     #   messages = [
     #     {
     #       "role": "system",
