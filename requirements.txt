@@ -1,5 +1,9 @@
 line-bot-sdk
 flask
-openai
 gunicorn
-pandas
+openai==0.28.0
+pandas==2.2.2
+gspread==6.1.2
+google-auth==2.34.0
+google-auth-oauthlib==1.2.1
+google-api-python-client==2.143.0
