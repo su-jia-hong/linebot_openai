@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from flask import session
 
 app = Flask(__name__)
 
@@ -52,28 +53,30 @@ def display_cart():
     return result
 
 # 移除購物車中的品項
+
 def remove_from_cart(item_name, quantity=1):
-    global cart  # 在使用 cart 前先宣告它為全局變量
+    cart = session.get('cart', [])
     
     # 計算購物車中某品項的數量
     item_count = sum(1 for item in cart if item['品項'] == item_name)
-    
+
     if item_count == 0:
         return f"購物車中沒有找到 {item_name}。"
-    
+
     # 需要移除的數量不能超過購物車中該品項的數量
     remove_count = min(quantity, item_count)
-    
+
     # 移除指定數量的品項
     updated_cart = [item for item in cart if item['品項'] != item_name]  # 先排除所有該品項
     remaining_items = [item for item in cart if item['品項'] == item_name]  # 再找到該品項
-    
+
     # 加回需要保留的部分
     updated_cart.extend(remaining_items[remove_count:])
-    
-    cart = updated_cart  # 更新全局購物車
-    
+
+    session['cart'] = updated_cart  # 更新 session 購物車
+
     return f"{remove_count} 個 {item_name} 已從購物車中移除。"
+
 
 
 # 更新 Google Sheets 訂單
