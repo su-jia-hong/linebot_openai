@@ -53,34 +53,28 @@ def display_cart():
 
 # 移除購物車中的品項
 def remove_from_cart(item_name, quantity=1):
-    global cart  # 確保在使用 cart 之前聲明它為全局變量
+    global cart  # 在使用 cart 前先宣告它為全局變量
     
-    # 遍歷購物車，計算目前有多少個指定品項
+    # 計算購物車中某品項的數量
     item_count = sum(1 for item in cart if item['品項'] == item_name)
     
     if item_count == 0:
         return f"購物車中沒有找到 {item_name}。"
     
-    # 計算實際需要移除的數量
+    # 需要移除的數量不能超過購物車中該品項的數量
     remove_count = min(quantity, item_count)
     
-    # 初始化新購物車和已移除的項目數量
-    new_cart = []
-    removed_items = 0
+    # 移除指定數量的品項
+    updated_cart = [item for item in cart if item['品項'] != item_name]  # 先排除所有該品項
+    remaining_items = [item for item in cart if item['品項'] == item_name]  # 再找到該品項
     
-    # 從購物車中移除指定數量的品項
-    for item in cart:
-        if item['品項'] == item_name and removed_items < remove_count:
-            removed_items += 1
-        else:
-            new_cart.append(item)
+    # 加回需要保留的部分
+    updated_cart.extend(remaining_items[remove_count:])
     
-    cart = new_cart
+    cart = updated_cart  # 更新全局購物車
     
-    if removed_items > 0:
-        return f"已從購物車中移除 {removed_items} 個 {item_name}。"
-    else:
-        return f"購物車中沒有找到 {item_name}。"
+    return f"{remove_count} 個 {item_name} 已從購物車中移除。"
+
 
 # 更新 Google Sheets 訂單
 def update_existing_sheet():
