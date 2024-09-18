@@ -51,15 +51,36 @@ def display_cart():
         result += f"品項: {item_name}, 價格: {details['價格']}, 數量: {details['數量']}\n"
     return result
 
-# 移除購物車中的品項
 def remove_from_cart(item_name, quantity=1):
+    global cart
+    
+    # 遍歷購物車，計算目前有多少個指定品項
     item_count = sum(1 for item in cart if item['品項'] == item_name)
+    
     if item_count == 0:
         return f"購物車中沒有找到 {item_name}。"
+    
+    # 計算實際需要移除的數量
     remove_count = min(quantity, item_count)
-    global cart
-    cart = [item for item in cart if not (item['品項'] == item_name and remove_count > 0 and remove_count := remove_count - 1)]
-    return f"已從購物車中移除 {remove_count} 個 {item_name}。" if remove_count else f"購物車中沒有找到 {item_name}。"
+    
+    # 初始化新購物車和已移除的項目數量
+    new_cart = []
+    removed_items = 0
+    
+    # 從購物車中移除指定數量的品項
+    for item in cart:
+        if item['品項'] == item_name and removed_items < remove_count:
+            removed_items += 1
+        else:
+            new_cart.append(item)
+    
+    cart = new_cart
+    
+    if removed_items > 0:
+        return f"已從購物車中移除 {removed_items} 個 {item_name}。"
+    else:
+        return f"購物車中沒有找到 {item_name}。"
+
 
 # 更新 Google Sheets 訂單
 def update_existing_sheet():
