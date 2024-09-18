@@ -4,13 +4,13 @@ import pandas as pd
 import re
 import gspread
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from flask import session
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')  # 必須設置 secret_key 才能使用 session
 
 # 設定 API Key
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -21,9 +21,6 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 # 讀取 CSV 資料
 data = pd.read_csv('coffee2.csv', encoding='big5')
-
-# 初始化購物車
-cart = []
 
 # 提取品項名稱和數量
 def extract_item_name(response):
@@ -36,14 +33,17 @@ def chinese_to_number(chinese):
 
 # 加入購物車
 def add_to_cart(item_name, quantity):
+    cart = session.get('cart', [])
     item = data[data['品項'] == item_name]
     if not item.empty:
         cart.extend([{"品項": item.iloc[0]['品項'], "價格": item.iloc[0]['價格']} for _ in range(quantity)])
+        session['cart'] = cart  # 更新 session 中的購物車
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
     return f"菜單中找不到品項 {item_name}。"
 
 # 查看購物車
 def display_cart():
+    cart = session.get('cart', [])
     if not cart:
         return "您的購物車是空的。"
     cart_summary = {item['品項']: {'價格': item['價格'], '數量': cart.count(item)} for item in cart}
@@ -53,7 +53,6 @@ def display_cart():
     return result
 
 # 移除購物車中的品項
-
 def remove_from_cart(item_name, quantity=1):
     cart = session.get('cart', [])
     
@@ -77,10 +76,9 @@ def remove_from_cart(item_name, quantity=1):
 
     return f"{remove_count} 個 {item_name} 已從購物車中移除。"
 
-
-
 # 更新 Google Sheets 訂單
 def update_existing_sheet():
+    cart = session.get('cart', [])
     gc = gspread.service_account(filename='token.json')
     sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
     worksheet = sh.get_worksheet(0)
@@ -94,8 +92,7 @@ def update_existing_sheet():
     data = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data, 1)
 
-    global cart
-    cart.clear()  # 清空購物車
+    session.pop('cart', None)  # 清空購物車
     return "訂單已成功更新至 Google Sheets。"
 
 # Flask 路由處理 LINE Bot Webhook
