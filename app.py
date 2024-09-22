@@ -9,16 +9,17 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
-
-
 app = Flask(__name__)
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
+
 # Channel Access Token
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
+
 # Channel Secret
 handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+
 # OPENAI API Key初始化設定
-OpenAI.api_key = os.getenv('OPENAI_API_KEY')    
+OpenAI.api_key = os.getenv('OPENAI_API_KEY')
 
 # 讀取 CSV 資料
 data = pd.read_csv('coffee2.csv', encoding='big5')
@@ -101,7 +102,6 @@ def update_existing_sheet():
 def home():
     return "服務正常運行", 200
 
-
 # Flask 路由處理 LINE Bot Webhook
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -121,14 +121,16 @@ def handle_message(event):
     user_message = event.message.text.strip()
     
     # 使用 OpenAI 生成回應
-   response = openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
+            {"role": "system", "content": "answer the question considering the following data: " + info_str},
+            {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
             {"role": "user", "content": user_message},
         ]
     )
-    response = completion.choices[0].message.content
+    response = response.choices[0].message.content
 
     # 根據 GPT 的回應進行操作
     if '查看購物車' in user_message:
