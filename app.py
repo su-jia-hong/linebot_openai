@@ -38,6 +38,7 @@ def chinese_to_number(chinese):
 def add_to_cart(item_name, quantity):
     cart = session.get('cart', [])
     item = data[data['品項'] == item_name]
+    cart[item_name] = cart.get(item_name, 0) + quantity
     if not item.empty:
         quantity = int(quantity)  # 確保數量是 int 類型
         cart.extend([{"品項": item.iloc[0]['品項'], "價格": float(item.iloc[0]['價格'])} for _ in range(quantity)])  # 確保價格是 float 類型
