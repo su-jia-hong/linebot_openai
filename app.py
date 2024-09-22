@@ -19,7 +19,7 @@ line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # OPENAI API Key初始化設定
-OpenAI.api_key = os.getenv('OPENAI_API_KEY')
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # 讀取 CSV 資料
 data = pd.read_csv('coffee2.csv', encoding='big5')
