@@ -66,6 +66,7 @@ def add_to_cart(item_name, quantity):
         session['cart'] = cart  # 更新 session 中的購物車
         session.modified = True
         logging.info(f'Updated cart: {session["cart"]}')
+        logging.info(f"Current cart: {cart}")
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
     
     return f"菜單中找不到品項 {item_name}。"
