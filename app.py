@@ -16,12 +16,11 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 # 設置 session 的配置
-SESSION_TYPE = "filesystem"
-# app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
+app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
 
-# # 初始化 Session
-# Session(app)
+# 初始化 Session
+Session(app)
 
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
@@ -127,6 +126,19 @@ def update_existing_sheet():
 
     session.pop('cart', None)  # 清空購物車
     return "訂單已成功更新至 Google Sheets。"
+
+@app.route("/test_add_cart", methods=['GET'])
+def test_add_cart():
+    # 手動將一些商品加入購物車
+    session['cart'] = {'咖啡': {'品項': '咖啡', '價格': 50, '數量': 5}}
+    session.modified = True
+    return jsonify(session['cart'])
+
+@app.route("/test_display_cart", methods=['GET'])
+def test_display_cart():
+    # 查看購物車的內容
+    cart = session.get('cart', {})
+    return jsonify(cart)
 
 
 @app.route("/", methods=['GET'])
