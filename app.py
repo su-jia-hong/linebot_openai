@@ -121,7 +121,7 @@ def update_existing_sheet():
     data = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data, 1)
 
-    # session.pop('cart', None)  # 清空購物車
+    session.pop('cart', None)  # 清空購物車
     return "訂單已成功更新至 Google Sheets。"
 
 
