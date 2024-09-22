@@ -39,7 +39,8 @@ def add_to_cart(item_name, quantity):
     cart = session.get('cart', [])
     item = data[data['品項'] == item_name]
     if not item.empty:
-        cart.extend([{"品項": item.iloc[0]['品項'], "價格": item.iloc[0]['價格']} for _ in range(quantity)])
+        quantity = int(quantity)  # 確保數量是 int 類型
+        cart.extend([{"品項": item.iloc[0]['品項'], "價格": float(item.iloc[0]['價格'])} for _ in range(quantity)])  # 確保價格是 float 類型
         session['cart'] = cart  # 更新 session 中的購物車
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
     return f"菜單中找不到品項 {item_name}。"
