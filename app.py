@@ -38,16 +38,29 @@ def chinese_to_number(chinese):
 
 # 加入購物車
 def add_to_cart(item_name, quantity):
-    cart = session.get('cart', [])
+    cart = session.get('cart', {})  # 使用字典來存儲購物車
     item = data[data['品項'] == item_name]
-    cart[item_name] = cart.get(item_name, 0) + quantity
+    
     if not item.empty:
         quantity = int(quantity)  # 確保數量是 int 類型
-        cart.extend([{"品項": item.iloc[0]['品項'], "價格": float(item.iloc[0]['價格'])} for _ in range(quantity)])  # 確保價格是 float 類型
+        price = float(item.iloc[0]['價格'])  # 確保價格是 float 類型
+        
+        # 如果品項已經在購物車中，增加數量，否則添加新項目
+        if item_name in cart:
+            cart[item_name]['數量'] += quantity
+        else:
+            cart[item_name] = {
+                "品項": item_name,
+                "價格": price,
+                "數量": quantity
+            }
+        
         session['cart'] = cart  # 更新 session 中的購物車
+        logging.info(f'Updated cart: {session["cart"]}')
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
+    
     return f"菜單中找不到品項 {item_name}。"
-    logging.info(f'Updated cart: {session["cart"]}')
+
 
 # 查看購物車
 def display_cart():
