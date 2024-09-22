@@ -121,8 +121,7 @@ def handle_message(event):
     user_message = event.message.text.strip()
     
     # 使用 OpenAI 生成回應
-client = OpenAI()
-   completion = client.chat.completions.create(
+   response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
