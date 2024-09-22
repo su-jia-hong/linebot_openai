@@ -1,6 +1,7 @@
 line-bot-sdk
 flask
 gunicorn
+Flask-Session
 openai==0.28
 pandas
 gspread==6.1.2
