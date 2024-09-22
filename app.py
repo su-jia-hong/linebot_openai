@@ -65,6 +65,7 @@ def add_to_cart(item_name, quantity):
 # 查看購物車
 def display_cart():
     cart = session.get('cart', {})
+    logging.info(f'Current session cart: {cart}')  # 新增日誌
     if not cart:
         return "您的購物車是空的。"
     cart_summary = {item['品項']: {'價格': item['價格'], '數量': cart.count(item)} for item in cart}
