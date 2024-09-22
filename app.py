@@ -1,5 +1,4 @@
 import os
-import OpenAI from "openai";
 import pandas as pd
 import re
 import gspread
@@ -8,6 +7,7 @@ from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from openai import OpenAI
 
 const openai = new OpenAI();
 app = Flask(__name__)
@@ -17,7 +17,7 @@ line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
 # Channel Secret
 handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 # OPENAI API Key初始化設定
-openai.api_key = os.getenv('OPENAI_API_KEY')
+OpenAI.api_key = os.getenv('OPENAI_API_KEY')    
 
 # 讀取 CSV 資料
 data = pd.read_csv('coffee2.csv', encoding='big5')
@@ -118,9 +118,10 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
-
+    
     # 使用 OpenAI 生成回應
-   const completion = await openai.chat.completions.create(
+client = OpenAI()
+   completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
