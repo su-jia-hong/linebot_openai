@@ -3,12 +3,14 @@ import pandas as pd
 import re
 import gspread
 import openai
+import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
+logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
@@ -45,6 +47,7 @@ def add_to_cart(item_name, quantity):
         session['cart'] = cart  # 更新 session 中的購物車
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
     return f"菜單中找不到品項 {item_name}。"
+    logging.info(f'Updated cart: {session["cart"]}')
 
 # 查看購物車
 def display_cart():
