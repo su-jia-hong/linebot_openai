@@ -163,6 +163,7 @@ def handle_message(event):
 
     # 根據 GPT 的回應進行操作
     if '查看購物車' in user_message:
+        cart_display = display_cart()
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=display_cart()))
     elif '確認訂單' in user_message:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=update_existing_sheet()))
