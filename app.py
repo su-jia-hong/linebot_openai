@@ -94,6 +94,12 @@ def update_existing_sheet():
     session.pop('cart', None)  # 清空購物車
     return "訂單已成功更新至 Google Sheets。"
 
+
+@app.route("/", methods=['GET'])
+def home():
+    return "服務正常運行", 200
+
+
 # Flask 路由處理 LINE Bot Webhook
 @app.route("/callback", methods=['POST'])
 def callback():
