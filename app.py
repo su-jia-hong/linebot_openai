@@ -4,6 +4,7 @@ import re
 import gspread
 import openai
 import logging
+from flask_session import Session
 from datetime import datetime
 from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
