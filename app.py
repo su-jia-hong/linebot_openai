@@ -10,16 +10,18 @@ from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from flask_session import Session
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 # 設置 session 的配置
-app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
+SESSION_TYPE = "filesystem"
+# app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
 
-# 初始化 Session
-Session(app)
+# # 初始化 Session
+# Session(app)
 
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
