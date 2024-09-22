@@ -2,12 +2,13 @@ import os
 import pandas as pd
 import re
 import gspread
+import openai
 from datetime import datetime
 from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from openai import OpenAI
+
 
 const openai = new OpenAI();
 app = Flask(__name__)
