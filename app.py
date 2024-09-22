@@ -12,7 +12,8 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')
+app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
 # Channel Access Token
