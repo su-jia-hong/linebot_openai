@@ -10,14 +10,13 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')  # 必須設置 secret_key 才能使用 session
-
-# 設定 API Key
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-# 設定 LINE Bot API 和 Webhook Handler
-line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
+static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
+# Channel Access Token
+line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
+# Channel Secret
+handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+# OPENAI API Key初始化設定
+OpenAI.api_key = os.getenv('OPENAI_API_KEY')
 
 # 讀取 CSV 資料
 data = pd.read_csv('coffee2.csv', encoding='big5')
