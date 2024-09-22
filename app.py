@@ -1,5 +1,5 @@
 import os
-import openai
+import OpenAI from "openai";
 import pandas as pd
 import re
 import gspread
@@ -9,6 +9,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
+const openai = new OpenAI();
 app = Flask(__name__)
 static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 # Channel Access Token
@@ -119,7 +120,7 @@ def handle_message(event):
     user_message = event.message.text.strip()
 
     # 使用 OpenAI 生成回應
-    completion = openai.chat_completions.create(
+   const completion = await openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
