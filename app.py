@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import redis
 import re
 import gspread
 import openai
@@ -10,13 +11,16 @@ from flask import Flask, request, jsonify, session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from flask_session import Session
+
 
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
 # 設置 session 的配置
-app.config['SESSION_TYPE'] = 'filesystem'  # 或者 'redis' 等
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379, db=0)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
 
 # 初始化 Session
@@ -64,19 +68,17 @@ def add_to_cart(item_name, quantity):
                 "數量": quantity
             }
         
-        session['cart'] = cart  # 更新 session 中的購物車
-        session.modified = True
-        logging.info(f'Updated cart: {session["cart"]}')
-        logging.info(f"Current cart: {cart}")
+        session['cart'] = cart  # 更新 session 中的購物車，這將自動存入 Redis
+        session.modified = True  # 告訴 Flask 這次 session 被修改了
         return f"已將 {quantity} 杯 {item_name} 加入購物車。"
     
     return f"菜單中找不到品項 {item_name}。"
 
 
+
 # 查看購物車
 def display_cart():
     cart = session.get('cart', {})
-    logging.info(f'Current session cart: {cart}')
     if not cart:
         return "您的購物車是空的。"
     result = "當前購物車:\n"
