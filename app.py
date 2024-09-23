@@ -42,6 +42,7 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
+
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
     chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
