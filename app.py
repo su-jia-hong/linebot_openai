@@ -57,12 +57,8 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     return items
 
-# 增加購物車的品項
-@app.route('/add_to_cart', methods=['POST'])
-def add_to_cart():
-    item_name = request.json.get('item')
-    quantity = request.json.get('quantity', 1)
-    
+# 提取購物車操作
+def add_item_to_cart(item_name, quantity):
     if 'cart' not in session:
         session['cart'] = []
     
@@ -78,6 +74,15 @@ def add_to_cart():
         return {"message": f"已將 {quantity} 杯 {item_name} 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
+
+
+# 增加購物車的品項
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    item_name = request.json.get('item')
+    quantity = request.json.get('quantity', 1)
+    return add_item_to_cart(item_name, quantity)
+
 
 # 顯示購物車內容
 @app.route('/view_cart')
@@ -175,18 +180,20 @@ def handle_message(event):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-            {"role": "system", "content": "answer the question considering the following data: "},
-            {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
             {"role": "user", "content": user_message},
         ]
     )
     response = response.choices[0].message.content
     items = extract_item_name(response)
+    
     for item_name, quantity in items:
-        add_to_cart_response = add_to_cart(item_name, quantity)
+        add_to_cart_response = add_item_to_cart(item_name, quantity)
         print(add_to_cart_response)
 
-    return {"message": response}
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=response)
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
