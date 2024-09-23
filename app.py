@@ -183,6 +183,7 @@ def handle_message(event):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
+            {"role": "system", "content": "answer the question considering the following data: " + info_str},
             {"role": "user", "content": user_message},
         ]
     )
