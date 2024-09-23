@@ -3,6 +3,7 @@ from flask_session import Session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import os
 import openai
 import pandas as pd
 import re
