@@ -1,6 +1,9 @@
 from flask import Flask, request, session
 from flask_session import Session
 from datetime import datetime
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import openai
 import pandas as pd
 import gspread
