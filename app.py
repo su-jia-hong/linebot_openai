@@ -147,23 +147,40 @@ def confirm_order():
     session['cart'] = []  # 清空購物車
     return {"message": "訂單已確認並更新到 Google Sheets。"}
 
-# 使用 OpenAI ChatGPT 進行互動
-@app.route('/chat', methods=['POST'])
-def chat():
-    msg = request.json.get('message')
-    info_from_csv = data[['種類', '品項', '價格', '標籤']]
-    info_str = f"Category: {info_from_csv['種類'].tolist()}, Item: {info_from_csv['品項'].tolist()}, Price: {info_from_csv['價格'].tolist()}, Tag: {info_from_csv['標籤'].tolist()}"
+@app.route("/", methods=['GET'])
+def home():
+    return "服務正常運行", 200
+
+# Flask 路由處理 LINE Bot Webhook
+@app.route("/callback", methods=['POST'])
+def callback():
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
+
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        return 'Invalid signature', 400
+
+    return 'OK'
+
+
+# LINE Bot 處理訊息事件
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text.strip()
     
-    completion = openai.ChatCompletion.create(
+    # 使用 OpenAI 生成回應
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-            {"role": "system", "content": "answer the question considering the following data: " + info_str},
-            {"role": "user", "content": msg},
+            {"role": "system", "content": "answer the question considering the following data: "},
+            {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
+            {"role": "user", "content": user_message},
         ]
     )
-    
-    response = completion.choices[0].message.content
+    response = response.choices[0].message.content
     items = extract_item_name(response)
     for item_name, quantity in items:
         add_to_cart_response = add_to_cart(item_name, quantity)
