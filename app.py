@@ -177,7 +177,6 @@ def handle_message(event):
     user_message = event.message.text.strip()
     
     # 使用 OpenAI 生成回應
-    client = OpenAI()
     info_from_csv = data[['種類','品項','價格','標籤']]
     info_str = f"Category: {info_from_csv['種類']}, Item: {info_from_csv['品項']}, Price: {info_from_csv['價格']}, Tag: {info_from_csv['標籤']}"
     response = openai.ChatCompletion.create(
