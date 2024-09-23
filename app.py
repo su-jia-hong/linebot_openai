@@ -1,15 +1,14 @@
 from flask import Flask, request, session
 from flask_session import Session
-from datetime import datetime
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import openai
 import pandas as pd
-import gspread
 import re
+import gspread
+from datetime import datetime
 import redis
-import os
 
 # 初始化 Flask 應用
 app = Flask(__name__)
@@ -20,7 +19,7 @@ app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
 app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
+
 # 啟用 Session
 Session(app)
 
