@@ -10,16 +10,21 @@ import re
 import gspread
 from datetime import datetime
 import redis
+
 # 初始化 Flask 應用
 app = Flask(__name__)
+
+# 從環境變數中讀取 Redis URL
+redis_url = os.getenv('REDIS_URL')
 
 # 配置 Flask Session 使用 Redis
 app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
-app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379)
 
+# 使用 Redis URL 進行連接
+app.config['SESSION_REDIS'] = redis.StrictRedis.from_url(redis_url)
 # 啟用 Session
 Session(app)
 
