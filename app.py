@@ -213,11 +213,6 @@ def handle_message(event):
         ]
     )
      
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart()
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=cart_display))
-    response = response.choices[0].message.content
     items = extract_item_name(response)
     
     for item_name, quantity in items:
@@ -228,6 +223,14 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=response)
     )
+
+        # 查看購物車功能
+    if '查看購物車' in user_message:
+        cart_display = display_cart()
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=cart_display))
+
+
+    response = response.choices[0].message.content
    
 
 if __name__ == '__main__':
