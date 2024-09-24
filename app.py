@@ -68,7 +68,8 @@ def extract_item_name(response):
 def convert_price(price):
     return int(price) if isinstance(price, (int, float)) else price
 
-# 提取購物車操作
+
+# 增加購物車的品項
 def add_item_to_cart(item_name, quantity):
     if 'cart' not in session:
         session['cart'] = []
@@ -79,12 +80,13 @@ def add_item_to_cart(item_name, quantity):
         for _ in range(quantity):
             cart.append({
                 "品項": item.iloc[0]['品項'],
-                "價格": convert_price(item.iloc[0]['價格'])  # 轉換價格
+                "價格": int(item.iloc[0]['價格'])  # 確保價格為整數
             })
         session['cart'] = cart
         return {"message": f"已將 {quantity} 杯 {item_name} 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
+
 
 # 增加購物車的品項
 @app.route('/add_to_cart', methods=['POST'])
@@ -142,7 +144,7 @@ def confirm_order():
             cart_summary[item['品項']]['數量'] += 1
         else:
             cart_summary[item['品項']] = {
-                '價格': item['價格'],
+                '價格': int(item['價格']),  # 確保價格為整數
                 '數量': 1
             }
 
@@ -160,6 +162,7 @@ def confirm_order():
 
     session['cart'] = []  # 清空購物車
     return {"message": "訂單已確認並更新到 Google Sheets。"}
+
 
 @app.route("/", methods=['GET'])
 def home():
