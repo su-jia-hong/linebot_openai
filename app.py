@@ -181,6 +181,12 @@ def callback():
 
     return 'OK'
 
+@app.route("/test_display_cart", methods=['GET'])
+def test_display_cart():
+    # 查看購物車的內容
+    cart = session.get('cart', {})
+    return jsonify(cart)
+
 
 # LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
@@ -210,6 +216,11 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=response)
     )
+    
+    if '查看購物車' in user_message:
+        cart_display = display_cart()
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=display_cart()))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
