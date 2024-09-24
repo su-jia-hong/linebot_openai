@@ -11,6 +11,7 @@ import gspread
 from datetime import datetime
 import redis
 
+
 # 初始化 Flask 應用
 app = Flask(__name__)
 
