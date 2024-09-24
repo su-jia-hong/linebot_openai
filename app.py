@@ -14,6 +14,12 @@ import redis
 # 初始化 Flask 應用
 app = Flask(__name__)
 
+secret_key = os.getenv('SECRET_KEY')
+if not secret_key:
+    raise ValueError("SECRET_KEY is not set")
+app.config['SECRET_KEY'] = secret_key
+
+
 # 從環境變數中讀取 Redis URL
 redis_url = os.getenv('REDIS_URL')
 
@@ -22,10 +28,7 @@ app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
-if not secret_key:
-    raise ValueError("SECRET_KEY is not set")
-app.config['SECRET_KEY'] = secret_key
+
 
 # 使用 Redis URL 進行連接
 app.config['SESSION_REDIS'] = redis.StrictRedis.from_url(redis_url)
