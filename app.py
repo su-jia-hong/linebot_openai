@@ -22,6 +22,7 @@ app.config['SESSION_TYPE'] = 'redis'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # 確保設置了 SECRET_KEY
 
 # 使用 Redis URL 進行連接
 app.config['SESSION_REDIS'] = redis.StrictRedis.from_url(redis_url)
