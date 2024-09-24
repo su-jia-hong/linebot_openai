@@ -19,7 +19,6 @@ if not secret_key:
     raise ValueError("SECRET_KEY is not set")
 app.config['SECRET_KEY'] = secret_key
 
-
 # 從環境變數中讀取 Redis URL
 redis_url = os.getenv('REDIS_URL')
 
@@ -29,13 +28,10 @@ app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
 app.config['SESSION_KEY_PREFIX'] = 'session:'
 
-
 # 使用 Redis URL 進行連接
 app.config['SESSION_REDIS'] = redis.StrictRedis.from_url(redis_url)
 # 啟用 Session
 Session(app)
-
-static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
 # Channel Access Token
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -53,7 +49,6 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
     chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
@@ -69,6 +64,10 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     return items
 
+# 轉換價格為整數
+def convert_price(price):
+    return int(price) if isinstance(price, (int, float)) else price
+
 # 提取購物車操作
 def add_item_to_cart(item_name, quantity):
     if 'cart' not in session:
@@ -80,13 +79,12 @@ def add_item_to_cart(item_name, quantity):
         for _ in range(quantity):
             cart.append({
                 "品項": item.iloc[0]['品項'],
-                "價格": item.iloc[0]['價格']
+                "價格": convert_price(item.iloc[0]['價格'])  # 轉換價格
             })
         session['cart'] = cart
         return {"message": f"已將 {quantity} 杯 {item_name} 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
-
 
 # 增加購物車的品項
 @app.route('/add_to_cart', methods=['POST'])
@@ -94,7 +92,6 @@ def add_to_cart():
     item_name = request.json.get('item')
     quantity = request.json.get('quantity', 1)
     return add_item_to_cart(item_name, quantity)
-
 
 # 顯示購物車內容
 @app.route('/view_cart')
