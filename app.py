@@ -1,4 +1,4 @@
-from flask import Flask, request, session
+from flask import Flask, request, session, jsonify
 from flask_session import Session
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -68,7 +68,6 @@ def extract_item_name(response):
 def convert_price(price):
     return int(price) if isinstance(price, (int, float)) else price
 
-
 # 增加購物車的品項
 def add_item_to_cart(item_name, quantity):
     if 'cart' not in session:
@@ -87,6 +86,28 @@ def add_item_to_cart(item_name, quantity):
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
 
+# 顯示購物車內容的函數
+def display_cart():
+    cart = session.get('cart', [])
+    if not cart:
+        return "購物車是空的"
+    
+    cart_summary = {}
+    for item in cart:
+        item_name = item['品項']
+        if item_name in cart_summary:
+            cart_summary[item_name]['數量'] += 1
+        else:
+            cart_summary[item_name] = {
+                '價格': item['價格'],
+                '數量': 1
+            }
+    
+    display_str = "購物車內容：\n"
+    for item_name, details in cart_summary.items():
+        display_str += f"{item_name}: {details['數量']} 個, 每個 {details['價格']} 元\n"
+    
+    return display_str
 
 # 增加購物車的品項
 @app.route('/add_to_cart', methods=['POST'])
@@ -98,18 +119,7 @@ def add_to_cart():
 # 顯示購物車內容
 @app.route('/view_cart')
 def view_cart():
-    cart = session.get('cart', [])
-    cart_summary = {}
-    for item in cart:
-        item_name = item['品項']
-        if item_name in cart_summary:
-            cart_summary[item_name]['數量'] += 1
-        else:
-            cart_summary[item_name] = {
-                '價格': item['價格'],
-                '數量': 1
-            }
-    return {"cart": cart_summary}
+    return display_cart()
 
 # 從購物車移除品項
 @app.route('/remove_from_cart', methods=['POST'])
@@ -163,7 +173,6 @@ def confirm_order():
     session['cart'] = []  # 清空購物車
     return {"message": "訂單已確認並更新到 Google Sheets。"}
 
-
 @app.route("/", methods=['GET'])
 def home():
     return "服務正常運行", 200
@@ -181,12 +190,10 @@ def callback():
 
     return 'OK'
 
+# 測試購物車內容的路由
 @app.route("/test_display_cart", methods=['GET'])
 def test_display_cart():
-    # 查看購物車的內容
-    cart = session.get('cart', {})
-    return jsonify(cart)
-
+    return display_cart()
 
 # LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
@@ -194,7 +201,7 @@ def handle_message(event):
     user_message = event.message.text.strip()
     
     # 使用 OpenAI 生成回應
-    info_from_csv = data[['種類','品項','價格','標籤']]
+    info_from_csv = data[['種類', '品項', '價格', '標籤']]
     info_str = f"Category: {info_from_csv['種類']}, Item: {info_from_csv['品項']}, Price: {info_from_csv['價格']}, Tag: {info_from_csv['標籤']}"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -217,10 +224,10 @@ def handle_message(event):
         TextSendMessage(text=response)
     )
     
+    # 查看購物車功能
     if '查看購物車' in user_message:
         cart_display = display_cart()
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=display_cart()))
-
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=cart_display))
 
 if __name__ == '__main__':
     app.run(debug=True)
