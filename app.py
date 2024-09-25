@@ -1,7 +1,3 @@
-0924 
-
-
-
 from flask import Flask, request, session
 from flask_session import Session
 from linebot import LineBotApi, WebhookHandler
