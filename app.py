@@ -135,11 +135,12 @@ def confirm_order(user_id):
     
         cart_summary = {}
         for item in cart:
-            if item['品項'] in cart_summary:
-                cart_summary[item['品項']]['數量'] += 1
+            item_name = item['品項']
+            if item_name in cart_summary:
+                cart_summary[item_name]['數量'] += 1
             else:
-                cart_summary[item['品項']] = {
-                    '價格': int(item['價格']),
+                cart_summary[item_name] = {
+                    '價格': item['價格'],
                     '數量': 1
                 }
     
@@ -171,7 +172,7 @@ def confirm_order_route():
         return jsonify({"message": "缺少 user_id 參數。"}), 400
     
     order_confirmation = confirm_order(user_id)
-    if 'message' in order_confirmation and order_confirmation.get('message') == "訂單已確認並更新到 Google Sheets。":
+    if order_confirmation.get('message') == "訂單已確認並更新到 Google Sheets。":
         return jsonify(order_confirmation), 200
     else:
         return jsonify(order_confirmation), 500
