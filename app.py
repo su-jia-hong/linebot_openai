@@ -204,7 +204,7 @@ def handle_message(event):
     
     # 確認訂單功能
     if '確認訂單' in user_message:
-        order_confirmation = confirm_order(user_id)
+        order_confirmation = confirm_order_route(user_id)
         response_text += f"\n{order_confirmation['message']}"
     
     # 回應 LINE Bot 用戶
