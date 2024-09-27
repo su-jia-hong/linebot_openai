@@ -107,40 +107,58 @@ def remove_from_cart(user_id, item_name, quantity=1):
     return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
 
 # 確認訂單並更新到 Google Sheets
-def confirm_order(user_id):
-    cart = user_carts.get(user_id, [])
+import json
+
+# 確認訂單並更新到 Google Sheets
+def confirm_order_route():
+    cart = session.get('cart', [])
     if not cart:
-        return {"message": "購物車是空的，無法確認訂單。"}
+        return jsonify({"message": "購物車是空的，無法確認訂單。"})
     
-    gc = gspread.service_account(filename='token.json')
-    sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
-    worksheet = sh.get_worksheet(0)
+    try:
+        # 從環境變數中讀取 Service Account JSON
+        service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        if not service_account_info:
+            return jsonify({"message": "Google Service Account 憑證未設置。"}), 500
+        
+        # 將 JSON 字串轉換為字典
+        service_account_dict = json.loads(service_account_info)
+        
+        # 使用 gspread 的 service_account_from_dict 方法
+        gc = gspread.service_account_from_dict(service_account_dict)
+        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
+        worksheet = sh.get_worksheet(0)
     
-    cart_summary = {}
-    for item in cart:
-        if item['品項'] in cart_summary:
-            cart_summary[item['品項']]['數量'] += 1
-        else:
-            cart_summary[item['品項']] = {
-                '價格': int(item['價格']),  # 確保價格為整數
-                '數量': 1
-            }
+        cart_summary = {}
+        for item in cart:
+            if item['品項'] in cart_summary:
+                cart_summary[item['品項']]['數量'] += 1
+            else:
+                cart_summary[item['品項']] = {
+                    '價格': int(item['價格']),  # 確保價格為整數
+                    '數量': 1
+                }
     
-    order_df = pd.DataFrame([
-        {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
-        for item_name, details in cart_summary.items()
-    ])
+        order_df = pd.DataFrame([
+            {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
+            for item_name, details in cart_summary.items()
+        ])
+        
+        order_df['總價'] = order_df['價格'] * order_df['數量']
+        order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
     
-    order_df['總價'] = order_df['價格'] * order_df['數量']
-    order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+        data = [order_df.columns.values.tolist()] + order_df.values.tolist()
+        worksheet.insert_rows(data, 1)
     
-    data = [order_df.columns.values.tolist()] + order_df.values.tolist()
-    worksheet.insert_rows(data, 1)
-    
-    # 清空購物車
-    user_carts[user_id] = []
-    return {"message": "訂單已確認並更新到 Google Sheets。"}
+        # 清空購物車
+        session['cart'] = []
+        return jsonify({"message": "訂單已確認並更新到 Google Sheets。"})
+    except json.JSONDecodeError:
+        return jsonify({"message": "Google Service Account 憑證格式錯誤。"}), 500
+    except Exception as e:
+        return jsonify({"message": f"訂單確認失敗，錯誤訊息：{str(e)}"}), 500
+
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
