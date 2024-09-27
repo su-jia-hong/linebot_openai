@@ -113,7 +113,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
     user_carts[user_id] = new_cart
     return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
 
-# 確認訂單並更新到 Google Sheets
+# 定義內部函數 confirm_order
 def confirm_order(user_id):
     cart = user_carts.get(user_id, [])
     if not cart:
@@ -159,9 +159,9 @@ def confirm_order(user_id):
         user_carts[user_id] = []
         return {"message": "訂單已確認並更新到 Google Sheets。"}
     except json.JSONDecodeError:
-        return {"message": "Google Service Account 憑證格式錯誤。"}, 500
+        return {"message": "Google Service Account 憑證格式錯誤。"}
     except Exception as e:
-        return {"message": f"訂單確認失敗，錯誤訊息：{str(e)}"}, 500
+        return {"message": f"訂單確認失敗，錯誤訊息：{str(e)}"}
 
 # 確認訂單的 API 路由
 @app.route('/confirm_order', methods=['POST'])
@@ -207,7 +207,6 @@ def handle_message(event):
                 {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
                 {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
                 {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
-                {"role": "system", "content": "回復客人的問題時，回復的內容請依據 coffee2.csv 這個檔案"},
                 {"role": "user", "content": user_message}
             ]
         )
