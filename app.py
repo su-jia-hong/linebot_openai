@@ -216,14 +216,12 @@ def handle_message(event):
     
         # 使用 OpenAI 生成回應，僅傳遞必要的菜單資料
         menu_info = get_menu_info()
-        # 或者使用 JSON 格式
-        # menu_info = get_menu_json()
     
-        completion = openai.ChatCompletion.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "你是一個線上咖啡廳點餐助手。"},
-                {"role": "system", "content": menu_info},
+                {"role": "system", "content": "answer the question considering the following data: " + menu_info},
                 {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元。請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
                 {"role": "user", "content": user_message},
             ]
