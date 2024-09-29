@@ -172,7 +172,7 @@ def handle_message(event):
             {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
             {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
             {"role": "system", "content": "answer the question considering the following data: " + info_str},
-            {"role": "system", "content": "當使用者只有傳送菜單兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
+            {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
             {"role": "user", "content": user_message}
         ]
     )
