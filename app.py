@@ -160,7 +160,8 @@ def callback():
 def handle_message(event):
     user_message = event.message.text.strip()
     # 將 DataFrame 轉換為字串
-    info_str = excel_data.to_string(index=False)
+    # 將 DataFrame 轉換為字串
+    info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
     # 使用 OpenAI 生成回應
