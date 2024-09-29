@@ -100,9 +100,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
     item_count = sum(1 for item in cart if item['品項'] == item_name)
     
     if item_count == 0:
-        return {"message": f
-
-"購物車中沒有找到 {item_name}。"}
+        return {"message": f"購物車中沒有找到 {item_name}。"}
     
     remove_count = min(quantity, item_count)
     new_cart = []
