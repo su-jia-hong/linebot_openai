@@ -159,6 +159,8 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
+    # 將 DataFrame 轉換為字串
+    info_str = excel_data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
     # 使用 OpenAI 生成回應
@@ -168,6 +170,7 @@ def handle_message(event):
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
             {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
             {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
+            {"role": "system", "content": "answer the question considering the following data: " + info_str},
             {"role": "user", "content": user_message}
         ]
     )
