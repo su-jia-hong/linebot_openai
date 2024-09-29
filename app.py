@@ -8,15 +8,8 @@ import pandas as pd
 import re
 import gspread
 from datetime import datetime
-import json
 
 app = Flask(__name__)
-
-# 讀取環境變數
-secret_key = os.getenv('SECRET_KEY')
-if not secret_key:
-    raise ValueError("SECRET_KEY is not set")
-app.config['SECRET_KEY'] = secret_key
 
 # 初始化 LINE Bot
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -24,8 +17,6 @@ handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # 初始化 OpenAI API Key
 openai.api_key = os.getenv('OPENAI_API_KEY')
-if not openai.api_key:
-    raise ValueError("OpenAI API key is not set in environment variables.")
 
 # 讀取 CSV 資料
 try:
@@ -115,69 +106,41 @@ def remove_from_cart(user_id, item_name, quantity=1):
     user_carts[user_id] = new_cart
     return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
 
-# 定義內部函數 confirm_order
+# 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
     
-    try:
-        # 從環境變數中讀取 Service Account JSON
-        service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
-        if not service_account_info:
-            return {"message": "Google Service Account 憑證未設置。"}
-        
-        # 將 JSON 字串轉換為字典
-        service_account_dict = json.loads(service_account_info)
-        
-        # 使用 gspread 的 service_account_from_dict 方法
-        gc = gspread.service_account_from_dict(service_account_dict)
-        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
-        worksheet = sh.get_worksheet(0)
+    gc = gspread.service_account(filename='token.json')
+    sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
+    worksheet = sh.get_worksheet(0)
     
-        cart_summary = {}
-        for item in cart:
-            item_name = item['品項']
-            if item_name in cart_summary:
-                cart_summary[item_name]['數量'] += 1
-            else:
-                cart_summary[item_name] = {
-                    '價格': item['價格'],
-                    '數量': 1
-                }
+    cart_summary = {}
+    for item in cart:
+        if item['品項'] in cart_summary:
+            cart_summary[item['品項']]['數量'] += 1
+        else:
+            cart_summary[item['品項']] = {
+                '價格': int(item['價格']),  # 確保價格為整數
+                '數量': 1
+            }
     
-        order_df = pd.DataFrame([
-            {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
-            for item_name, details in cart_summary.items()
-        ])
-        
-        order_df['總價'] = order_df['價格'] * order_df['數量']
-        order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+    order_df = pd.DataFrame([
+        {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
+        for item_name, details in cart_summary.items()
+    ])
     
-        data = [order_df.columns.values.tolist()] + order_df.values.tolist()
-        worksheet.insert_rows(data, 1)
+    order_df['總價'] = order_df['價格'] * order_df['數量']
+    order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
     
-        # 清空購物車
-        user_carts[user_id] = []
-        return {"message": "訂單已確認並更新到 Google Sheets。"}
-    except json.JSONDecodeError:
-        return {"message": "Google Service Account 憑證格式錯誤。"}
-    except Exception as e:
-        return {"message": f"訂單確認失敗，錯誤訊息：{str(e)}"}
-
-# 確認訂單的 API 路由
-@app.route('/confirm_order', methods=['POST'])
-def confirm_order_route():
-    user_id = request.json.get('user_id')
-    if not user_id:
-        return jsonify({"message": "缺少 user_id 參數。"}), 400
+    data = [order_df.columns.values.tolist()] + order_df.values.tolist()
+    worksheet.insert_rows(data, 1)
     
-    order_confirmation = confirm_order(user_id)
-    if order_confirmation.get('message') == "訂單已確認並更新到 Google Sheets。":
-        return jsonify(order_confirmation), 200
-    else:
-        return jsonify(order_confirmation), 500
+    # 清空購物車
+    user_carts[user_id] = []
+    return {"message": "訂單已確認並更新到 Google Sheets。"}
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -198,45 +161,33 @@ def handle_message(event):
     user_message = event.message.text.strip()
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
+    # 使用 OpenAI 生成回應
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
+            {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元 請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
+            {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    response_text = response.choices[0].message.content
+    
+    # 提取並處理購物車品項
+    items = extract_item_name(user_message)
+    for item_name, quantity in items:
+        add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
+        response_text += f"\n{add_to_cart_response['message']}"
+    
+    # 查看購物車功能
+    if '查看購物車' in user_message:
+        cart_display = display_cart(user_id)
+        response_text += f"\n{cart_display}"
+    
+    # 確認訂單功能
     if '確認訂單' in user_message:
-        # 調用內部的 confirm_order 函數
         order_confirmation = confirm_order(user_id)
-        response_text = order_confirmation['message']
-    else:
-        # 提取並處理購物車品項
-        items = extract_item_name(user_message)
-        for item_name, quantity in items:
-            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-            response_text += f"\n{add_to_cart_response['message']}"
-    
-        # 查看購物車功能
-        if '查看購物車' in user_message:
-            cart_display = display_cart(user_id)
-            response_text += f"\n{cart_display}"
-    
-        # 使用 OpenAI 生成回應，僅傳遞必要的菜單資料
-        menu_info = get_menu_info()
-    
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "你是一個線上咖啡廳點餐助手。"},
-                {"role": "system", "content": "answer the question considering the following data: " + menu_info},
-                {"role": "system", "content": "當客人點餐時，請務必回復品項和數量，例如：'好的，你點的是一杯美式，價格是50元。請問還需要為您添加其他的餐點或飲品嗎？' 或 '好的，您要一杯榛果拿鐵，價格為80元。請問還有其他需要幫忙的嗎？'"},
-                {"role": "user", "content": user_message},
-            ]
-        )
-    
-        response_text = response.choices[0].message.content
-    
-        # 從回應中提取多個品項名稱和數量並加入購物車
-        items = extract_item_name(response)
-        if items:
-            for item_name, quantity in items:  # 遍歷每個提取的品項和數量
-                add_response = add_to_cart(item_name, quantity)  # 將每個品項加入購物車
-                response_text += f"\n{add_response}"
-        else:
-            print("無法從回應中提取品項名稱。")
+        response_text += f"\n{order_confirmation['message']}"
     
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
@@ -250,25 +201,6 @@ def test_display_cart():
     # 為了測試，這裡假設使用特定的 user_id
     test_user_id = 'test_user'
     return display_cart(test_user_id)
-
-# 生成訂單編號
-def generate_order_id():
-    return datetime.now().strftime('%m%d%H%M')
-
-# 獲取精簡的菜單資訊
-def get_menu_info():
-    menu = data[['品項', '價格']].drop_duplicates()
-    menu_list = menu.to_dict(orient='records')
-    info_str = "以下是我們的菜單資料:\n"
-    for item in menu_list:
-        info_str += f"{item['品項']} - {item['價格']}元\n"
-    return info_str
-
-# 使用 JSON 格式的菜單資料
-def get_menu_json():
-    menu = data[['品項', '價格']].drop_duplicates()
-    menu_json = menu.to_dict(orient='records')
-    return json.dumps(menu_json, ensure_ascii=False)
 
 # 啟動應用
 if __name__ == '__main__':
