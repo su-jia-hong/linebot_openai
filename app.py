@@ -229,8 +229,7 @@ def handle_message(event):
             ]
         )
     
-        response = completion.choices[0].message.content
-        print(response)
+        response_text = response.choices[0].message.content
     
         # 從回應中提取多個品項名稱和數量並加入購物車
         items = extract_item_name(response)
