@@ -122,7 +122,7 @@ def confirm_order(user_id):
     gc = gspread.service_account_from_dict(credentials_dict)
     
     sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=drive_link')
-    worksheet = sh.get_worksheet(0)
+    worksheet = sh.get_worksheet(1)
     
     cart_summary = {}
     for item in cart:
