@@ -1,12 +1,13 @@
+import os
+import json
+import gspread
 from flask import Flask, request, jsonify
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-import os
 import openai
 import pandas as pd
 import re
-import gspread
 from datetime import datetime
 
 app = Flask(__name__)
@@ -112,7 +113,14 @@ def confirm_order(user_id):
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
     
-    gc = gspread.service_account(filename='token.json')
+    # 從環境變數讀取 Google Service Account 的憑證
+    google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+    if not google_credentials_json:
+        return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
+    
+    credentials_dict = json.loads(google_credentials_json)
+    gc = gspread.service_account_from_dict(credentials_dict)
+    
     sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
     worksheet = sh.get_worksheet(0)
     
@@ -160,7 +168,6 @@ def callback():
 def handle_message(event):
     user_message = event.message.text.strip()
     # 將 DataFrame 轉換為字串
-    # 將 DataFrame 轉換為字串
     info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
@@ -190,7 +197,7 @@ def handle_message(event):
         response_text += f"\n{cart_display}"
     
     # 確認訂單功能
-    if '確認訂單' in user_message:
+    if '確認訂單' in user_message or '送出訂單' in user_message:
         order_confirmation = confirm_order(user_id)
         response_text += f"\n{order_confirmation['message']}"
     
