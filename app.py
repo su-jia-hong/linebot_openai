@@ -121,7 +121,7 @@ def confirm_order(user_id):
     credentials_dict = json.loads(google_credentials_json)
     gc = gspread.service_account_from_dict(credentials_dict)
     
-    sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
+    sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1VkaR3VioiJtGMN8EYppyBDK55P0tJFBY-gXqrw28zdM/edit?usp=drive_link')
     worksheet = sh.get_worksheet(0)
     
     cart_summary = {}
