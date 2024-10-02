@@ -28,9 +28,6 @@ except Exception as e:
     exit()
 
 # 將中文數字轉換為阿拉伯數字
-import re
-
-# 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
     chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
                         '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
@@ -60,7 +57,6 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     
     return items
-
 
 # 初始化全局購物車字典
 user_carts = {}
@@ -125,8 +121,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
             new_cart.append(item)
     
     user_carts[user_id] = new_cart
-    return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
-
+    return {"message": f"已從購物車中移除 {removed_items} 杯 {item_name}。"}
 
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
@@ -197,65 +192,47 @@ def handle_message(event):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-            {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
-            {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"},
-            {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
-            {"role": "system", "content": "answer the question considering the following data: " + info_str},
-            {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
+            {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問您需要冰的還是熱的？'。"},
             {"role": "user", "content": user_message}
         ]
     )
-    response_text = response.choices[0].message.content
     
-    # 提取並處理購物車品項
-    items = extract_item_name(user_message)
-    for item_name, quantity in items:
-        add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-        response_text += f"\n{add_to_cart_response['message']}"
+    response_message = response['choices'][0]['message']['content']
     
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
-    
-    # 確認訂單功能
-    if '確認訂單' in user_message or '送出訂單' in user_message:
-        order_confirmation = confirm_order(user_id)
-        response_text += f"\n{order_confirmation['message']}"
-    
-    # 刪除購物車品項功能
-    if "刪除" in user_message:
-        item_name_quantity = re.findall(r'刪除(\d+|[一二三四五六七八九十])\s*(\S+)', user_message)
-        if item_name_quantity:
-            quantity = int(item_name_quantity[0][0]) if item_name_quantity[0][0].isdigit() else chinese_to_number(item_name_quantity[0][0])
-            item_name = item_name_quantity[0][1]
-            result = remove_from_cart(user_id, item_name, quantity)
-            bot_response = result["message"]
-        else:
-            bot_response = "請提供正確的刪除指令格式，例如：刪除2杯美式咖啡。"
-    
-    elif user_message == "查看購物車":
-        bot_response = display_cart(user_id)
-    
+    if "點餐" in user_message or "加入購物車" in user_message:
+        items = extract_item_name(response_message)
+        reply_message = ""
+        for item_name, quantity in items:
+            result = add_item_to_cart(user_id, item_name, quantity)
+            reply_message += result["message"] + "\n"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_message.strip())
+        )
+    elif "顯示購物車" in user_message:
+        cart_content = display_cart(user_id)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=cart_content)
+        )
+    elif "移除" in user_message or "刪除" in user_message:
+        item_name = response_message.split(' ')[-1]  # 從回應中提取品項名稱
+        result = remove_from_cart(user_id, item_name)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=result["message"])
+        )
     elif "確認訂單" in user_message:
         result = confirm_order(user_id)
-        bot_response = result["message"]
-    
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=result["message"])
+        )
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=response_message)
+        )
 
-
-
-
-# 測試購物車內容的路由
-@app.route("/test_display_cart", methods=['GET'])
-def test_display_cart():
-    # 為了測試，這裡假設使用特定的 user_id
-    test_user_id = 'test_user'
-    return display_cart(test_user_id)
-
-# 啟動應用
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run()
