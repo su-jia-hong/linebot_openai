@@ -48,7 +48,7 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     
     # Pattern 2: 品項 + 單位 + 數量
-    pattern2 = re.compile(r'([\w\s]+)\s*' + quantity_pattern)
+    pattern2 = re.compile(r'quantity_pattern' + ([\w\s]+)\s*)
     matches2 = pattern2.findall(response)
     for match in matches2:
         item_name = match[0].strip()
