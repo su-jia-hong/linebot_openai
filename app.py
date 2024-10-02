@@ -183,8 +183,6 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
-    # 將 DataFrame 轉換為字串
-    info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
     # 使用 OpenAI 生成回應
@@ -225,12 +223,13 @@ def handle_message(event):
         item_name = remove_match.group(3).strip()
         remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
         response_text += f"\n{remove_from_cart_response['message']}"
-
+    
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
+
 
 
 
