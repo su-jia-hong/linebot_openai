@@ -3,7 +3,7 @@ import pandas as pd
 import re
 from datetime import datetime
 import gspread
-
+import os
 # 讀取CSV資料
 try:
     data = pd.read_csv('coffee2.csv', encoding='big5')
