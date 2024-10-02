@@ -213,40 +213,40 @@ def handle_message(event):
         add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
         response_text += f"\n{add_to_cart_response['message']}"
     
-   if "點餐" in user_message or "加入購物車" in user_message:
-        items = extract_item_name(response_message)
-        reply_message = ""
-        for item_name, quantity in items:
-            result = add_item_to_cart(user_id, item_name, quantity)
-            reply_message += result["message"] + "\n"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=reply_message.strip())
-        )
-    elif "顯示購物車" in user_message:
-        cart_content = display_cart(user_id)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=cart_content)
-        )
-    elif "移除" in user_message or "刪除" in user_message:
-        item_name = response_message.split(' ')[-1]  # 從回應中提取品項名稱
+    # 查看購物車功能
+    if '查看購物車' in user_message:
+        cart_display = display_cart(user_id)
+        response_text += f"\n{cart_display}"
+    
+    # 確認訂單功能
+    if '確認訂單' in user_message or '送出訂單' in user_message:
+        order_confirmation = confirm_order(user_id)
+        response_text += f"\n{order_confirmation['message']}"
+    
+    # 刪除購物車品項功能
+    if "移除" in user_message or "刪除" in user_message:
+        item_name_quantity = re.findall(r'刪除(\d+|[一二三四五六七八九十])\s*(\S+)', user_message)
         result = remove_from_cart(user_id, item_name)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=result["message"])
-        )
+        if item_name_quantity:
+            quantity = int(item_name_quantity[0][0]) if item_name_quantity[0][0].isdigit() else chinese_to_number(item_name_quantity[0][0])
+            item_name = item_name_quantity[0][1]
+            result = remove_from_cart(user_id, item_name, quantity)
+            bot_response = result["message"]
+        else:
+            bot_response = "請提供正確的刪除指令格式，例如：刪除2杯美式咖啡。"
+    
+    elif user_message == "查看購物車":
+        bot_response = display_cart(user_id)
+    
     elif "確認訂單" in user_message:
         result = confirm_order(user_id)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=result["message"])
-        )
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=response_text)
-        )
+        bot_response = result["message"]
+    
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=response_text)
+    )
+
 
 
 
