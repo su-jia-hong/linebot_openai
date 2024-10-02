@@ -34,12 +34,34 @@ def chinese_to_number(chinese):
 
 # 提取品項名稱和數量
 def extract_item_name(response):
-    matches = re.findall(r'(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
+    pattern = r'(?:' \
+              r'(?P<quantity1>\d+|[一二三四五六七八九十])\s*(?P<unit1>杯|片|份|個)\s*(?P<item1>[\w\s]+)' \
+              r'|' \
+              r'(?P<item2>[\w\s]+)\s*(?P<quantity2>\d+|[一二三四五六七八九十])\s*(?P<unit2>杯|片|份|個)' \
+              r')'
+    
+    matches = re.findall(pattern, response)
     items = []
+    
     for match in matches:
-        quantity = int(match[0]) if match[0].isdigit() else chinese_to_number(match[0])
-        item_name = match[2].strip()
-        items.append((item_name, quantity))
+        quantity = 0
+        unit = ''
+        item_name = ''
+        
+        if match[0] and match[1] and match[2]:
+            # 匹配到「數量 + 單位 + 品項」
+            quantity = int(match[0]) if match[0].isdigit() else chinese_to_number(match[0])
+            unit = match[1]
+            item_name = match[2].strip()
+        elif match[3] and match[4] and match[5]:
+            # 匹配到「品項 + 數量 + 單位」
+            item_name = match[3].strip()
+            quantity = int(match[4]) if match[4].isdigit() else chinese_to_number(match[4])
+            unit = match[5]
+        
+        if item_name and quantity > 0:
+            items.append((item_name, quantity))
+    
     return items
 
 # 初始化全局購物車字典
