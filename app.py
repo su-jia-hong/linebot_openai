@@ -122,6 +122,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
     user_carts[user_id] = new_cart
     return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
 
+
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
     cart = user_carts.get(user_id, [])
@@ -218,10 +219,10 @@ def handle_message(event):
         response_text += f"\n{order_confirmation['message']}"
     
     # 刪除購物車品項功能
-    match = re.search(r'移除\s*(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', user_message)
-    if match:
-        quantity = int(match.group(1)) if match.group(1).isdigit() else chinese_to_number(match.group(1))
-        item_name = match.group(3).strip()
+    remove_match = re.search(r'移除\s*(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', user_message)
+    if remove_match:
+        quantity = int(remove_match.group(1)) if remove_match.group(1).isdigit() else chinese_to_number(remove_match.group(1))
+        item_name = remove_match.group(3).strip()
         remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
         response_text += f"\n{remove_from_cart_response['message']}"
 
@@ -230,6 +231,7 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=response_text)
     )
+
 
 
 # 測試購物車內容的路由
