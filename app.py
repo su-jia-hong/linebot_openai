@@ -224,18 +224,28 @@ def handle_message(event):
         response_text += f"\n{order_confirmation['message']}"
     
     # 刪除購物車品項功能
-    remove_match = re.search(r'移除\s*(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', user_message)
-    if remove_match:
-        quantity = int(remove_match.group(1)) if remove_match.group(1).isdigit() else chinese_to_number(remove_match.group(1))
-        item_name = remove_match.group(3).strip()
-        remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
-        response_text += f"\n{remove_from_cart_response['message']}"
-
-    # 回應 LINE Bot 用戶
+    if "刪除" in user_message:
+        item_name_quantity = re.findall(r'刪除(\d+|[一二三四五六七八九十])\s*(\S+)', user_message)
+        if item_name_quantity:
+            quantity = int(item_name_quantity[0][0]) if item_name_quantity[0][0].isdigit() else chinese_to_number(item_name_quantity[0][0])
+            item_name = item_name_quantity[0][1]
+            result = remove_from_cart(user_id, item_name, quantity)
+            bot_response = result["message"]
+        else:
+            bot_response = "請提供正確的刪除指令格式，例如：刪除2杯美式咖啡。"
+    
+    elif user_message == "查看購物車":
+        bot_response = display_cart(user_id)
+    
+    elif "確認訂單" in user_message:
+        result = confirm_order(user_id)
+        bot_response = result["message"]
+    
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=response_text)
+        TextSendMessage(text=bot_response)
     )
+
 
 
 
