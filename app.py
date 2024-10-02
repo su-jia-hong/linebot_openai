@@ -34,12 +34,27 @@ def chinese_to_number(chinese):
 
 # 提取品項名稱和數量
 def extract_item_name(response):
-    matches = re.findall(r'(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
     items = []
-    for match in matches:
+    
+    # 定義數量和單位的模式
+    quantity_pattern = r'(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)'
+    
+    # Pattern 1: 數量 + 單位 + 品項
+    pattern1 = re.compile(quantity_pattern + r'\s*([\w\s]+)')
+    matches1 = pattern1.findall(response)
+    for match in matches1:
         quantity = int(match[0]) if match[0].isdigit() else chinese_to_number(match[0])
         item_name = match[2].strip()
         items.append((item_name, quantity))
+    
+    # Pattern 2: 品項 + 單位 + 數量
+    pattern2 = re.compile(r'([\w\s]+)\s*' + quantity_pattern)
+    matches2 = pattern2.findall(response)
+    for match in matches2:
+        item_name = match[0].strip()
+        quantity = int(match[1]) if match[1].isdigit() else chinese_to_number(match[1])
+        items.append((item_name, quantity))
+    
     return items
 
 # 初始化全局購物車字典
