@@ -28,11 +28,15 @@ except Exception as e:
     exit()
 
 # 將中文數字轉換為阿拉伯數字
+import re
+
+# 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
-    chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
+    chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+                        '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
     return chinese_numerals.get(chinese, 0)
 
-# 提取品項名稱和數量
+# 提取品項名稱和數量（支持數量+品項 和 品項+數量）
 def extract_item_name(response):
     items = []
     
@@ -47,8 +51,8 @@ def extract_item_name(response):
         item_name = match[2].strip()
         items.append((item_name, quantity))
     
-    # Pattern 2: 品項 + 單位 + 數量
-    pattern2 = re.compile(r'quantity_pattern' + ([\w\s]+)\s*)
+    # Pattern 2: 品項 + 數量 + 單位
+    pattern2 = re.compile(r'([\w\s]+)\s*(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)')
     matches2 = pattern2.findall(response)
     for match in matches2:
         item_name = match[0].strip()
@@ -56,6 +60,7 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     
     return items
+
 
 # 初始化全局購物車字典
 user_carts = {}
