@@ -164,8 +164,6 @@ def callback():
     return 'OK'
 
 # LINE Bot 處理訊息事件
-
-# LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
@@ -186,12 +184,10 @@ def handle_message(event):
             {"role": "user", "content": user_message}
         ]
     )
-    
-    # 獲取 OpenAI 的回應
     response_text = response.choices[0].message.content
     
     # 提取並處理購物車品項
-    items = extract_item_name(response_text)  # 根據 OpenAI 的回應提取品項
+    items = extract_item_name(user_message)
     for item_name, quantity in items:
         add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
         response_text += f"\n{add_to_cart_response['message']}"
@@ -211,7 +207,6 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=response_text)
     )
-
 
 # 測試購物車內容的路由
 @app.route("/test_display_cart", methods=['GET'])
