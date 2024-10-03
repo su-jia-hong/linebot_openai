@@ -52,38 +52,60 @@ def callback():
     return 'OK'
 
 # LINE Bot 處理訊息事件
+# 用於存儲每個用戶的狀態
+user_states = {}
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
-    # 將 DataFrame 轉換為字串
-    info_str = data.to_string(index=False)
-    
-    # 使用 OpenAI 生成回應
-    response_text = get_openai_response(user_message, info_str)
-    
-    # 提取並處理購物車品項
-    items = extract_item_name(user_message)
-    for item_name, quantity in items:
-        add_to_cart_response = add_item_to_cart(user_id, item_name, quantity, data)
-        response_text += f"\n{add_to_cart_response['message']}"
-    
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
-    
-    # 確認訂單功能
-    if '確認訂單' in user_message or '送出訂單' in user_message:
-        order_confirmation = confirm_order(user_id, data, GOOGLE_CREDENTIALS_JSON, GOOGLE_SHEET_URL)
-        response_text += f"\n{order_confirmation['message']}"
-    
+    # 初始化用戶狀態
+    if user_id not in user_states:
+        user_states[user_id] = {'cart': [], 'step': 'start'}
+
+    # 根據用戶當前的狀態處理消息
+    current_state = user_states[user_id]['step']
+    response_text = ""
+
+    # 處理不同狀態下的用戶消息
+    if current_state == 'start':
+        if '查看購物車' in user_message:
+            cart_display = display_cart(user_id)
+            response_text += f"\n{cart_display}"
+        elif '確認訂單' in user_message or '送出訂單' in user_message:
+            order_confirmation = confirm_order(user_id, data, GOOGLE_CREDENTIALS_JSON, GOOGLE_SHEET_URL)
+            response_text += f"\n{order_confirmation['message']}"
+        else:
+            items = extract_item_name(user_message)
+            if items:
+                for item_name, quantity in items:
+                    add_to_cart_response = add_item_to_cart(user_id, item_name, quantity, data)
+                    response_text += f"\n{add_to_cart_response['message']}"
+                # 更新狀態為 "等待確認"
+                user_states[user_id]['step'] = 'waiting_for_confirmation'
+            else:
+                response_text = get_openai_response(user_message, data.to_string(index=False))
+
+    elif current_state == 'waiting_for_confirmation':
+        if '確認' in user_message:
+            order_confirmation = confirm_order(user_id, data, GOOGLE_CREDENTIALS_JSON, GOOGLE_SHEET_URL)
+            response_text += f"\n{order_confirmation['message']}"
+            user_states[user_id]['step'] = 'start'  # 重置狀態
+        elif '取消' in user_message:
+            response_text += "\n您的訂單已取消。"
+            user_states[user_id]['step'] = 'start'  # 重置狀態
+        else:
+            response_text = "請問您要確認訂單嗎？還是取消訂單？"
+
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
+
+
+
 
 # 測試購物車內容的路由
 @app.route("/test_display_cart", methods=['GET'])
