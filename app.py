@@ -9,6 +9,7 @@ import openai
 import pandas as pd
 import re
 from datetime import datetime
+from shopping_cart import extract_item_name
 from shopping_cart import (
     load_data,
     add_item_to_cart,
@@ -16,7 +17,6 @@ from shopping_cart import (
     display_cart,
     confirm_order,
     get_openai_response
-    extract_item_name
 )
 
 app = Flask(__name__)
