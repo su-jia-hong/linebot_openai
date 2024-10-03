@@ -16,6 +16,7 @@ from shopping_cart import (
     display_cart,
     confirm_order,
     get_openai_response
+    extract_item_name
 )
 
 app = Flask(__name__)
