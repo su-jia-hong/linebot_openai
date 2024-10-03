@@ -164,20 +164,21 @@ def callback():
     return 'OK'
 
 # LINE Bot 處理訊息事件
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
     # 將 DataFrame 轉換為字串
     info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
-    
+
     # 使用 OpenAI 生成回應
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
             {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
-            {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"},
+            # {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"},
             {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
             {"role": "system", "content": "answer the question considering the following data: " + info_str},
             {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
@@ -185,28 +186,33 @@ def handle_message(event):
         ]
     )
     response_text = response.choices[0].message.content
-    
+
     # 提取並處理購物車品項
     items = extract_item_name(user_message)
-    for item_name, quantity in items:
-        add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-        response_text += f"\n{add_to_cart_response['message']}"
-    
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
-    
-    # 確認訂單功能
-    if '確認訂單' in user_message or '送出訂單' in user_message:
-        order_confirmation = confirm_order(user_id)
-        response_text += f"\n{order_confirmation['message']}"
-    
+    try:
+        for item_name, quantity in items:
+            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
+            response_text += f"\n{add_to_cart_response['message']}"
+
+        # 查看購物車功能
+        if '查看購物車' in user_message:
+            cart_display = display_cart(user_id)
+            response_text += f"\n{cart_display}"
+        
+        # 確認訂單功能
+        if '確認訂單' in user_message or '送出訂單' in user_message:
+            order_confirmation = confirm_order(user_id)
+            response_text += f"\n{order_confirmation['message']}"
+
+    except Exception as e:
+        response_text += f"\n處理購物車時發生錯誤: {e}"
+
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
+
 
 # 測試購物車內容的路由
 @app.route("/test_display_cart", methods=['GET'])
