@@ -93,7 +93,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
     
     if item_count == 0:
         return {"message": f"購物車中沒有找到 {item_name}。"}
-    
+
     remove_count = min(quantity, item_count)
     new_cart = []
     removed_items = 0
@@ -184,10 +184,11 @@ def handle_message(event):
             {"role": "user", "content": user_message}
         ]
     )
+    
     response_text = response.choices[0].message.content
     
     # 提取並處理購物車品項
-    items = extract_item_name(user_message)
+    items = extract_item_name(response_text)
     for item_name, quantity in items:
         add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
         response_text += f"\n{add_to_cart_response['message']}"
