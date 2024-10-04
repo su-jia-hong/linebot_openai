@@ -240,7 +240,7 @@ def handle_message(event):
             items_to_prompt = []
             for item_name, quantity in items:
                 item = data[data['品項'] == item_name]
-                if not item.empty and item.iloc[0]['類型'] in ['咖啡', '歐蕾', '茶']:
+                if not item.empty and item.iloc[0]['標籤'] in ['咖啡', '歐蕾', '茶']:
                     items_to_prompt.append((item_name, quantity))
                 else:
                     # 直接加入購物車，無需選擇溫度
