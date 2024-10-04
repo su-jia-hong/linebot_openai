@@ -49,7 +49,7 @@ user_carts = {}
 pending_temperatures = {}
 
 # 增加購物車的品項
-def add_item_to_cart(user_id, item_name, quantity, temperature=None):
+def add_item_to_cart(user_id, item_name, quantity, temperature):
     if user_id not in user_carts:
         user_carts[user_id] = []
     
@@ -57,19 +57,13 @@ def add_item_to_cart(user_id, item_name, quantity, temperature=None):
     item = data[data['品項'] == item_name]
     if not item.empty:
         for _ in range(quantity):
-            cart_item = {
+            cart.append({
                 "品項": item.iloc[0]['品項'],
-                "價格": int(item.iloc[0]['價格'])  # 確保價格為整數
-            }
-            # 僅對特定類型添加溫度選項
-            if item.iloc[0]['類型'] in ['咖啡', '歐蕾', '茶']:
-                cart_item["溫度"] = temperature
-            cart.append(cart_item)
+                "價格": int(item.iloc[0]['價格']),  # 確保價格為整數
+                "溫度": temperature  # 新增溫度欄位
+            })
         user_carts[user_id] = cart
-        if temperature:
-            return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
-        else:
-            return {"message": f"已將 {quantity} 個 {item_name} 加入購物車。", "cart": cart}
+        return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
 
@@ -82,11 +76,8 @@ def display_cart(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        if '溫度' in item:
-            temperature = item.get('溫度', '常溫')
-            key = f"{item_name} ({temperature})"
-        else:
-            key = f"{item_name}"
+        temperature = item.get('溫度', '常溫')  # 預設為常溫
+        key = f"{item_name} ({temperature})"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -97,20 +88,18 @@ def display_cart(user_id):
     
     display_str = "以下是您的購物車內容：\n"
     for item_key, details in cart_summary.items():
-        display_str += f"{item_key}: {details['數量']} 個, 每個 {details['價格']} 元\n"
+        display_str += f"{item_key}: {details['數量']} 杯, 每杯 {details['價格']} 元\n"
     
     return display_str
 
 # 移除購物車中的品項
 def remove_from_cart(user_id, item_name, quantity=1):
     cart = user_carts.get(user_id, [])
-    # 查找所有匹配的項目，無論是否有溫度
-    matched_items = [item for item in cart if item['品項'] == item_name]
-    item_count = len(matched_items)
+    item_count = sum(1 for item in cart if item['品項'] == item_name)
     
     if item_count == 0:
         return {"message": f"購物車中沒有找到 {item_name}。"}
-    
+
     remove_count = min(quantity, item_count)
     new_cart = []
     removed_items = 0
@@ -144,11 +133,8 @@ def confirm_order(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', None)
-        if temperature:
-            key = f"{item_name} ({temperature})"
-        else:
-            key = f"{item_name}"
+        temperature = item.get('溫度', '常溫')
+        key = f"{item_name} ({temperature})"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -158,12 +144,10 @@ def confirm_order(user_id):
             }
     
     order_df = pd.DataFrame([
-        {
-            '品項': item_key.split(' (')[0],
-            '溫度': item_key.split(' (')[1].rstrip(')') if '(' in item_key else '',
-            '價格': details['價格'],
-            '數量': details['數量']
-        }
+        {'品項': item_key.split(' (')[0],
+         '溫度': item_key.split(' (')[1].rstrip(')'),
+         '價格': details['價格'],
+         '數量': details['數量']}
         for item_key, details in cart_summary.items()
     ])
     
@@ -236,25 +220,13 @@ def handle_message(event):
         # 提取並處理購物車品項
         items = extract_item_name(response_text)
         if items:
-            # 判斷每個品項是否需要選擇溫度
-            items_to_prompt = []
+            # 將品項暫存，等待使用者選擇溫度
+            if user_id not in pending_temperatures:
+                pending_temperatures[user_id] = []
             for item_name, quantity in items:
-                item = data[data['品項'] == item_name]
-                if not item.empty and item.iloc[0]['標籤'] in ['咖啡', '歐蕾', '茶']:
-                    items_to_prompt.append((item_name, quantity))
-                else:
-                    # 直接加入購物車，無需選擇溫度
-                    add_response = add_item_to_cart(user_id, item_name, quantity)
-                    response_text += f"\n{add_response['message']}"
-            
-            if items_to_prompt:
-                # 將需要選擇溫度的品項暫存，等待使用者選擇
-                if user_id not in pending_temperatures:
-                    pending_temperatures[user_id] = []
-                for item_name, quantity in items_to_prompt:
-                    pending_temperatures[user_id].append((item_name, quantity))
-                # 回覆詢問溫度選擇
-                response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
+                pending_temperatures[user_id].append((item_name, quantity))
+            # 回覆詢問溫度選擇
+            response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
         else:
             # 處理其他指令如刪除、查看購物車等
             if '刪除' in user_message or '移除' in user_message:
