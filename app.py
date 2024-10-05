@@ -42,8 +42,8 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     return items
 
-# 定義需要詢問「冰/熱」的品項類型
-temperature_required_types = ['咖啡', '歐蕾', '茶']
+# 定義需要詢問「冰/熱」的品項標籤
+temperature_required_labels = ['咖啡', '歐蕾', '茶']
 
 # 初始化全局購物車字典
 user_carts = {}
@@ -64,8 +64,8 @@ def add_item_to_cart(user_id, item_name, quantity, temperature=None):
                 "品項": item.iloc[0]['品項'],
                 "價格": int(item.iloc[0]['價格'])  # 確保價格為整數
             }
-            # 僅對特定類型添加溫度選項
-            if item.iloc[0]['類型'] in temperature_required_types and temperature:
+            # 僅對特定標籤添加溫度選項
+            if item.iloc[0]['標籤'] in temperature_required_labels and temperature:
                 cart_item["溫度"] = temperature
             cart.append(cart_item)
         user_carts[user_id] = cart
@@ -262,7 +262,7 @@ def handle_message(event):
             response_add_messages = []
             for item_name, quantity in items:
                 item = data[data['品項'] == item_name]
-                if not item.empty and item.iloc[0]['標籤'] in temperature_required_types:
+                if not item.empty and item.iloc[0]['標籤'] in temperature_required_labels:
                     items_to_prompt.append((item_name, quantity))
                 else:
                     # 直接加入購物車，無需選擇溫度
@@ -283,7 +283,7 @@ def handle_message(event):
         else:
             # 處理其他指令如刪除、查看購物車等
             if '刪除' in user_message or '移除' in user_message:
-                # 這裡假設 OpenAI 已經生成適當的刪除回應
+                # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
                 pass
             if '查看購物車' in user_message:
                 cart_display = display_cart(user_id)
