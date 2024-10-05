@@ -235,8 +235,11 @@ def handle_message(event):
         for item_name, quantity in items:
             item = data[data['品項'] == item_name]
             if not item.empty:
-                tag = item.iloc[0].get('標籤', '')
-                if tag in ['咖啡', '茶', '歐蕾']:
+                tags_str = item.iloc[0].get('標籤', '')
+                # 將標籤字符串轉換為列表，移除空字符串
+                tags = [tag for tag in tags_str.split('#') if tag]
+                # 判斷是否包含需要詢問溫度的標籤
+                if any(tag in ['咖啡', '茶', '歐蕾'] for tag in tags):
                     items_pending_temperature.append((item_name, quantity))
                 else:
                     add_response = add_item_to_cart(user_id, item_name, quantity, '無')
