@@ -42,6 +42,9 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     return items
 
+# 定義需要詢問「冰/熱」的品項類型
+temperature_required_types = ['咖啡', '歐蕾', '茶']
+
 # 初始化全局購物車字典
 user_carts = {}
 
@@ -49,7 +52,7 @@ user_carts = {}
 pending_temperatures = {}
 
 # 增加購物車的品項
-def add_item_to_cart(user_id, item_name, quantity, temperature):
+def add_item_to_cart(user_id, item_name, quantity, temperature=None):
     if user_id not in user_carts:
         user_carts[user_id] = []
     
@@ -57,13 +60,19 @@ def add_item_to_cart(user_id, item_name, quantity, temperature):
     item = data[data['品項'] == item_name]
     if not item.empty:
         for _ in range(quantity):
-            cart.append({
+            cart_item = {
                 "品項": item.iloc[0]['品項'],
-                "價格": int(item.iloc[0]['價格']),  # 確保價格為整數
-                "溫度": temperature  # 新增溫度欄位
-            })
+                "價格": int(item.iloc[0]['價格'])  # 確保價格為整數
+            }
+            # 僅對特定類型添加溫度選項
+            if item.iloc[0]['類型'] in temperature_required_types and temperature:
+                cart_item["溫度"] = temperature
+            cart.append(cart_item)
         user_carts[user_id] = cart
-        return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
+        if temperature:
+            return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
+        else:
+            return {"message": f"已將 {quantity} 個 {item_name} 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
 
@@ -76,8 +85,11 @@ def display_cart(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '常溫')  # 預設為常溫
-        key = f"{item_name} ({temperature})"
+        if '溫度' in item:
+            temperature = item.get('溫度', '常溫')
+            key = f"{item_name} ({temperature})"
+        else:
+            key = f"{item_name}"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -88,7 +100,10 @@ def display_cart(user_id):
     
     display_str = "以下是您的購物車內容：\n"
     for item_key, details in cart_summary.items():
-        display_str += f"{item_key}: {details['數量']} 杯, 每杯 {details['價格']} 元\n"
+        if "溫度" in item_key:
+            display_str += f"{item_key}: {details['數量']} 杯, 每杯 {details['價格']} 元\n"
+        else:
+            display_str += f"{item_key}: {details['數量']} 個, 每個 {details['價格']} 元\n"
     
     return display_str
 
@@ -133,8 +148,11 @@ def confirm_order(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '常溫')
-        key = f"{item_name} ({temperature})"
+        temperature = item.get('溫度', None)
+        if temperature:
+            key = f"{item_name} ({temperature})"
+        else:
+            key = f"{item_name}"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -143,20 +161,39 @@ def confirm_order(user_id):
                 '數量': 1
             }
     
-    order_df = pd.DataFrame([
-        {'品項': item_key.split(' (')[0],
-         '溫度': item_key.split(' (')[1].rstrip(')'),
-         '價格': details['價格'],
-         '數量': details['數量']}
-        for item_key, details in cart_summary.items()
-    ])
+    order_data = []
+    for item_key, details in cart_summary.items():
+        if '(' in item_key:
+            name, temp = item_key.split(' (')
+            temp = temp.rstrip(')')
+        else:
+            name = item_key
+            temp = ''
+        order_data.append({
+            '品項': name,
+            '溫度': temp,
+            '價格': details['價格'],
+            '數量': details['數量'],
+            '總價': details['價格'] * details['數量'],
+            '訂單時間': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            '訂單編號': datetime.now().strftime('%m%d%H%M')
+        })
     
-    order_df['總價'] = order_df['價格'] * order_df['數量']
-    order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+    order_df = pd.DataFrame(order_data)
     
-    data_to_upload = [order_df.columns.values.tolist()] + order_df.values.tolist()
-    worksheet.insert_rows(data_to_upload, 1)
+    # 如果 Google Sheets 已有標題行，插入到下方
+    # 這裡假設第一行是標題
+    if worksheet.row_count == 1:
+        # 插入標題
+        worksheet.insert_row(order_df.columns.tolist(), index=1)
+        start_row = 2
+    else:
+        start_row = worksheet.row_count + 1
+    
+    # 插入訂單資料
+    for _, row in order_df.iterrows():
+        worksheet.insert_row(row.tolist(), index=start_row)
+        start_row += 1
     
     # 清空購物車
     user_carts[user_id] = []
@@ -220,17 +257,33 @@ def handle_message(event):
         # 提取並處理購物車品項
         items = extract_item_name(response_text)
         if items:
-            # 將品項暫存，等待使用者選擇溫度
-            if user_id not in pending_temperatures:
-                pending_temperatures[user_id] = []
+            # 判斷每個品項是否需要選擇溫度
+            items_to_prompt = []
+            response_add_messages = []
             for item_name, quantity in items:
-                pending_temperatures[user_id].append((item_name, quantity))
-            # 回覆詢問溫度選擇
-            response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
+                item = data[data['品項'] == item_name]
+                if not item.empty and item.iloc[0]['標籤'] in temperature_required_types:
+                    items_to_prompt.append((item_name, quantity))
+                else:
+                    # 直接加入購物車，無需選擇溫度
+                    add_response = add_item_to_cart(user_id, item_name, quantity)
+                    response_add_messages.append(add_response['message'])
+            
+            # 如果有需要選擇溫度的品項，暫存並提示用戶
+            if items_to_prompt:
+                if user_id not in pending_temperatures:
+                    pending_temperatures[user_id] = []
+                for item_name, quantity in items_to_prompt:
+                    pending_temperatures[user_id].append((item_name, quantity))
+                response_text = "\n".join(response_add_messages) if response_add_messages else ""
+                response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
+            else:
+                # 如果所有品項都不需要選擇溫度
+                response_text = "\n".join(response_add_messages)
         else:
             # 處理其他指令如刪除、查看購物車等
             if '刪除' in user_message or '移除' in user_message:
-                # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
+                # 這裡假設 OpenAI 已經生成適當的刪除回應
                 pass
             if '查看購物車' in user_message:
                 cart_display = display_cart(user_id)
