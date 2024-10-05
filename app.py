@@ -49,7 +49,7 @@ user_carts = {}
 pending_temperatures = {}
 
 # 增加購物車的品項
-def add_item_to_cart(user_id, item_name, quantity, temperature):
+def add_item_to_cart(user_id, item_name, quantity, temperature='無'):
     if user_id not in user_carts:
         user_carts[user_id] = []
     
@@ -63,7 +63,10 @@ def add_item_to_cart(user_id, item_name, quantity, temperature):
                 "溫度": temperature  # 新增溫度欄位
             })
         user_carts[user_id] = cart
-        return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
+        if temperature == '無':
+            return {"message": f"已將 {quantity} 個 {item_name} 加入購物車。", "cart": cart}
+        else:
+            return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
 
@@ -76,8 +79,11 @@ def display_cart(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '常溫')  # 預設為常溫
-        key = f"{item_name} ({temperature})"
+        temperature = item.get('溫度', '無')  # 預設為無
+        if temperature != '無':
+            key = f"{item_name} ({temperature})"
+        else:
+            key = f"{item_name}"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -88,7 +94,7 @@ def display_cart(user_id):
     
     display_str = "以下是您的購物車內容：\n"
     for item_key, details in cart_summary.items():
-        display_str += f"{item_key}: {details['數量']} 杯, 每杯 {details['價格']} 元\n"
+        display_str += f"{item_key}: {details['數量']} 個, 每個 {details['價格']} 元\n"
     
     return display_str
 
@@ -133,8 +139,11 @@ def confirm_order(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '常溫')
-        key = f"{item_name} ({temperature})"
+        temperature = item.get('溫度', '無')
+        if temperature != '無':
+            key = f"{item_name} ({temperature})"
+        else:
+            key = f"{item_name}"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -145,7 +154,7 @@ def confirm_order(user_id):
     
     order_df = pd.DataFrame([
         {'品項': item_key.split(' (')[0],
-         '溫度': item_key.split(' (')[1].rstrip(')'),
+         '溫度': item_key.split(' (')[1].rstrip(')') if ' (' in item_key else '無',
          '價格': details['價格'],
          '數量': details['數量']}
         for item_key, details in cart_summary.items()
@@ -219,25 +228,46 @@ def handle_message(event):
         
         # 提取並處理購物車品項
         items = extract_item_name(response_text)
-        if items:
-            # 將品項暫存，等待使用者選擇溫度
+        items_to_add_directly = []
+        items_pending_temperature = []
+        response_messages = []
+        
+        for item_name, quantity in items:
+            item = data[data['品項'] == item_name]
+            if not item.empty:
+                tag = item.iloc[0].get('標籤', '')
+                if tag in ['咖啡', '茶', '歐蕾']:
+                    items_pending_temperature.append((item_name, quantity))
+                else:
+                    add_response = add_item_to_cart(user_id, item_name, quantity, '無')
+                    response_messages.append(add_response['message'])
+            else:
+                response_messages.append(f"菜單中找不到品項 {item_name}。")
+        
+        # 添加直接加入購物車的訊息
+        if response_messages:
+            response_text = "\n".join(response_messages) + "\n" + response_text
+        else:
+            response_text = response_text
+        
+        # 處理需要選擇溫度的品項
+        if items_pending_temperature:
             if user_id not in pending_temperatures:
                 pending_temperatures[user_id] = []
-            for item_name, quantity in items:
+            for item_name, quantity in items_pending_temperature:
                 pending_temperatures[user_id].append((item_name, quantity))
-            # 回覆詢問溫度選擇
             response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
-        else:
-            # 處理其他指令如刪除、查看購物車等
-            if '刪除' in user_message or '移除' in user_message:
-                # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
-                pass
-            if '查看購物車' in user_message:
-                cart_display = display_cart(user_id)
-                response_text += f"\n{cart_display}"
-            if '確認訂單' in user_message or '送出訂單' in user_message:
-                order_confirmation = confirm_order(user_id)
-                response_text += f"\n{order_confirmation['message']}"
+        
+        # 處理其他指令如刪除、查看購物車等
+        if '刪除' in user_message or '移除' in user_message:
+            # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
+            pass
+        if '查看購物車' in user_message:
+            cart_display = display_cart(user_id)
+            response_text += f"\n{cart_display}"
+        if '確認訂單' in user_message or '送出訂單' in user_message:
+            order_confirmation = confirm_order(user_id)
+            response_text += f"\n{order_confirmation['message']}"
         
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
