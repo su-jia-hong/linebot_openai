@@ -48,6 +48,9 @@ user_carts = {}
 # 初始化全局暫存溫度選擇字典
 pending_temperatures = {}
 
+# 初始化全局暫存用餐方式字典
+pending_order_mode = {}
+
 # 增加購物車的品項
 def add_item_to_cart(user_id, item_name, quantity, temperature='無'):
     if user_id not in user_carts:
@@ -120,7 +123,7 @@ def remove_from_cart(user_id, item_name, quantity=1):
     return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
 
 # 確認訂單並更新到 Google Sheets
-def confirm_order(user_id):
+def confirm_order(user_id, order_mode='無', table_number='無'):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
@@ -163,6 +166,8 @@ def confirm_order(user_id):
     order_df['總價'] = order_df['價格'] * order_df['數量']
     order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+    order_df['用餐方式'] = order_mode
+    order_df['桌號'] = table_number if order_mode == '內用' else '無'
     
     data_to_upload = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data_to_upload, 1)
@@ -204,6 +209,34 @@ def handle_message(event):
             # 清空待處理的溫度選擇
             pending_temperatures[user_id] = []
             response_text = "\n".join(response_messages)
+    # 檢查使用者是否有待處理的用餐方式選擇
+    elif user_id in pending_order_mode:
+        pending_state = pending_order_mode[user_id]['state']
+        if pending_state == 'awaiting_order_mode':
+            if user_message in ['內用', '外帶']:
+                order_mode = user_message
+                if order_mode == '外帶':
+                    # 確認訂單並上傳
+                    order_confirmation = confirm_order(user_id, order_mode=order_mode)
+                    response_text = f"{order_confirmation['message']}"
+                    # 清空用餐方式暫存
+                    del pending_order_mode[user_id]
+                elif order_mode == '內用':
+                    # 更新暫存狀態，等待桌號
+                    pending_order_mode[user_id]['state'] = 'awaiting_table_number'
+                    response_text = "請提供您的桌號。"
+            else:
+                response_text = "請回覆「內用」或「外帶」來選擇用餐方式。"
+        elif pending_state == 'awaiting_table_number':
+            table_number = user_message.strip()
+            if not table_number.isdigit():
+                response_text = "請提供有效的桌號（數字）。"
+            else:
+                # 確認訂單並上傳
+                order_confirmation = confirm_order(user_id, order_mode='內用', table_number=table_number)
+                response_text = f"{order_confirmation['message']}"
+                # 清空用餐方式暫存
+                del pending_order_mode[user_id]
     else:
         # 使用 OpenAI 生成回應
         # 將 DataFrame 轉換為字串
@@ -269,14 +302,18 @@ def handle_message(event):
             cart_display = display_cart(user_id)
             response_text += f"\n{cart_display}"
         if '確認訂單' in user_message or '送出訂單' in user_message:
-            order_confirmation = confirm_order(user_id)
-            response_text += f"\n{order_confirmation['message']}"
+            if user_carts.get(user_id):
+                # 啟動用餐方式選擇
+                pending_order_mode[user_id] = {'state': 'awaiting_order_mode'}
+                response_text += "\n請選擇用餐方式：「內用」或「外帶」。請回覆「內用」或「外帶」。"
+            else:
+                response_text += "\n您的購物車是空的，無法確認訂單。"
         
     # 回應 LINE Bot 用戶
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=response_text)
+        )
 
 # 測試購物車內容的路由
 @app.route("/test_display_cart", methods=['GET'])
