@@ -49,7 +49,7 @@ user_carts = {}
 pending_temperatures = {}
 
 # 增加購物車的品項
-def add_item_to_cart(user_id, item_name, quantity, temperature='無'):
+def add_item_to_cart(user_id, item_name, quantity, temperature):
     if user_id not in user_carts:
         user_carts[user_id] = []
     
@@ -63,10 +63,7 @@ def add_item_to_cart(user_id, item_name, quantity, temperature='無'):
                 "溫度": temperature  # 新增溫度欄位
             })
         user_carts[user_id] = cart
-        if temperature == '無':
-            return {"message": f"已將 {quantity} 個 {item_name} 加入購物車。", "cart": cart}
-        else:
-            return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
+        return {"message": f"已將 {quantity} 杯 {item_name} ({temperature}) 加入購物車。", "cart": cart}
     else:
         return {"message": f"菜單中找不到品項 {item_name}。"}
 
@@ -79,11 +76,8 @@ def display_cart(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '無')  # 預設為無
-        if temperature != '無':
-            key = f"{item_name} ({temperature})"
-        else:
-            key = f"{item_name}"
+        temperature = item.get('溫度', '常溫')  # 預設為常溫
+        key = f"{item_name} ({temperature})"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -94,7 +88,7 @@ def display_cart(user_id):
     
     display_str = "以下是您的購物車內容：\n"
     for item_key, details in cart_summary.items():
-        display_str += f"{item_key}: {details['數量']} 個, 每個 {details['價格']} 元\n"
+        display_str += f"{item_key}: {details['數量']} 杯, 每杯 {details['價格']} 元\n"
     
     return display_str
 
@@ -139,11 +133,8 @@ def confirm_order(user_id):
     cart_summary = {}
     for item in cart:
         item_name = item['品項']
-        temperature = item.get('溫度', '無')
-        if temperature != '無':
-            key = f"{item_name} ({temperature})"
-        else:
-            key = f"{item_name}"
+        temperature = item.get('溫度', '常溫')
+        key = f"{item_name} ({temperature})"
         if key in cart_summary:
             cart_summary[key]['數量'] += 1
         else:
@@ -154,7 +145,7 @@ def confirm_order(user_id):
     
     order_df = pd.DataFrame([
         {'品項': item_key.split(' (')[0],
-         '溫度': item_key.split(' (')[1].rstrip(')') if ' (' in item_key else '無',
+         '溫度': item_key.split(' (')[1].rstrip(')'),
          '價格': details['價格'],
          '數量': details['數量']}
         for item_key, details in cart_summary.items()
@@ -213,7 +204,7 @@ def handle_message(event):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-                {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問還需要為您添加其他的餐點嗎？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
+                {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
                 {"role": "system", "content": "當客人點的餐有兩個以上的品項時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？另外再加一片巧克力厚片，價格是40元。請問還有其他需要幫忙的嗎？' "},
                 {"role": "system", "content": "當客人說到刪除或移除字眼時，請務必回復刪除多少數量加品項，例如：'好的，已刪除一杯美式' "},
                 {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
@@ -228,49 +219,25 @@ def handle_message(event):
         
         # 提取並處理購物車品項
         items = extract_item_name(response_text)
-        items_to_add_directly = []
-        items_pending_temperature = []
-        response_messages = []
-        
-        for item_name, quantity in items:
-            item = data[data['品項'] == item_name]
-            if not item.empty:
-                tags_str = item.iloc[0].get('標籤', '')
-                # 將標籤字符串轉換為列表，移除空字符串
-                tags = [tag for tag in tags_str.split('#') if tag]
-                # 判斷是否包含需要詢問溫度的標籤
-                if any(tag in ['咖啡', '茶', '歐蕾'] for tag in tags):
-                    items_pending_temperature.append((item_name, quantity))
-                else:
-                    add_response = add_item_to_cart(user_id, item_name, quantity, '無')
-                    response_messages.append(add_response['message'])
-            else:
-                response_messages.append(f"菜單中找不到品項 {item_name}。")
-        
-        # 添加直接加入購物車的訊息
-        if response_messages:
-            response_text = "\n".join(response_messages) + "\n" + response_text
-        else:
-            response_text = response_text
-        
-        # 處理需要選擇溫度的品項
-        if items_pending_temperature:
+        if items:
+            # 將品項暫存，等待使用者選擇溫度
             if user_id not in pending_temperatures:
                 pending_temperatures[user_id] = []
-            for item_name, quantity in items_pending_temperature:
+            for item_name, quantity in items:
                 pending_temperatures[user_id].append((item_name, quantity))
+            # 回覆詢問溫度選擇
             response_text += "\n請選擇您要「冰」的還是「熱」的飲品。請回覆「冰」或「熱」。"
-        
-        # 處理其他指令如刪除、查看購物車等
-        if '刪除' in user_message or '移除' in user_message:
-            # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
-            pass
-        if '查看購物車' in user_message:
-            cart_display = display_cart(user_id)
-            response_text += f"\n{cart_display}"
-        if '確認訂單' in user_message or '送出訂單' in user_message:
-            order_confirmation = confirm_order(user_id)
-            response_text += f"\n{order_confirmation['message']}"
+        else:
+            # 處理其他指令如刪除、查看購物車等
+            if '刪除' in user_message or '移除' in user_message:
+                # 假設已在 OpenAI 回應中處理，這裡僅回覆刪除訊息
+                pass
+            if '查看購物車' in user_message:
+                cart_display = display_cart(user_id)
+                response_text += f"\n{cart_display}"
+            if '確認訂單' in user_message or '送出訂單' in user_message:
+                order_confirmation = confirm_order(user_id)
+                response_text += f"\n{order_confirmation['message']}"
         
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
