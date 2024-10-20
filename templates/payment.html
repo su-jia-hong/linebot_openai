@@ -56,7 +56,7 @@
 <body>
     <div class="payment-container">
         <!-- 從 templates 資料夾載入圖片 -->
-        <img src="S__80822274.jpg" alt="Product Image" class="product-image">
+        <img src="{{ url_for('static', filename='S__80822274.jpg') }}" alt="Product Image" class="product-image">
         
         <div class="product-name">ithome</div>
         <div class="product-amount">100 TWD</div>
