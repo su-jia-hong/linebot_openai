@@ -1,7 +1,7 @@
 import os
 import json
 import gspread
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
@@ -27,6 +27,9 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
+# 初始化全局購物車字典
+user_carts = {}
+
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
     chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, 
@@ -43,9 +46,6 @@ def extract_item_name(response):
         items.append((item_name, quantity))
     return items
 
-# 初始化全局購物車字典
-user_carts = {}
-
 # 增加購物車的品項
 def add_item_to_cart(user_id, item_name, quantity):
     if user_id not in user_carts:
@@ -57,7 +57,7 @@ def add_item_to_cart(user_id, item_name, quantity):
         for _ in range(quantity):
             cart.append({
                 "品項": item.iloc[0]['品項'],
-                "價格": int(item.iloc[0]['價格'])  # 確保價格為整數
+                "價格": int(item.iloc[0]['價格'])
             })
         user_carts[user_id] = cart
         return {"message": f"已將 {quantity} 杯 {item_name} 加入購物車。", "cart": cart}
@@ -84,26 +84,28 @@ def display_cart(user_id):
     
     return display_str
 
-# 移除購物車中的品項
-def remove_from_cart(user_id, item_name, quantity=1):
+# 虛擬付款頁面
+@app.route("/payment/<user_id>", methods=['GET', 'POST'])
+def payment(user_id):
     cart = user_carts.get(user_id, [])
-    item_count = sum(1 for item in cart if item['品項'] == item_name)
+    if not cart:
+        return "購物車是空的，無法進行付款。"
     
-    if item_count == 0:
-        return {"message": f"購物車中沒有找到 {item_name}。"}
+    total_amount = sum(item['價格'] for item in cart)
+    
+    if request.method == 'POST':
+        # 模擬付款成功
+        user_carts[user_id] = []  # 清空購物車
+        return redirect(url_for('payment_success', total=total_amount))
 
-    remove_count = min(quantity, item_count)
-    new_cart = []
-    removed_items = 0
-    
-    for item in cart:
-        if item['品項'] == item_name and removed_items < remove_count:
-            removed_items += 1
-        else:
-            new_cart.append(item)
-    
-    user_carts[user_id] = new_cart
-    return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
+    # 顯示虛擬付款頁面
+    return render_template('payment.html', total=total_amount)
+
+# 付款成功頁面
+@app.route("/payment_success")
+def payment_success():
+    total = request.args.get('total', 0)
+    return f"<h1>付款成功！總金額為 {total} 元</h1>"
 
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
@@ -142,16 +144,6 @@ def confirm_order(user_id):
     
     user_carts[user_id] = []
     return {"message": "訂單已確認並更新到 Google Sheets。"}
-
-# 模擬付款流程
-def process_payment(user_id):
-    cart = user_carts.get(user_id, [])
-    if not cart:
-        return {"message": "購物車是空的，無法進行付款。"}
-    
-    total_amount = sum(item['價格'] for item in cart)
-    user_carts[user_id] = []  # 清空購物車
-    return {"message": f"付款成功！總金額為 {total_amount} 元。"}
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -202,20 +194,22 @@ def handle_message(event):
         else:
             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
             response_text += f"\n{add_to_cart_response['message']}"
-    
+        
     # 查看購物車功能
     if '查看購物車' in user_message:
         cart_display = display_cart(user_id)
         response_text += f"\n{cart_display}"
+    
+    if '付款' in user_message:
+        # 引導至付款頁面
+        payment_url = f"{request.url_root}payment/{user_id}"
+        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
     
     # 確認訂單功能
     if '確認訂單' in user_message or '送出訂單' in user_message:
         order_confirmation = confirm_order(user_id)
         response_text += f"\n{order_confirmation['message']}"
 
-    if '付款' in user_message:
-        payment_response = process_payment(user_id)
-        response_text = payment_response['message']
 
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
