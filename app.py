@@ -87,20 +87,24 @@ def display_cart(user_id):
 # 虛擬付款頁面
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
-    cart = user_carts.get(user_id, [])
-    if not cart:
-        return "購物車是空的，無法進行付款。"
-    
-    total_amount = sum(item['價格'] for item in cart)
-    
-    if request.method == 'POST':
-        # 模擬付款成功
-        user_carts[user_id] = []  # 清空購物車
-        return redirect(url_for('payment_success', total=total_amount))
+    try:
+        cart = user_carts.get(user_id, [])
+        if not cart:
+            return render_template('error.html', message="購物車是空的，無法進行付款。")
 
-    # 顯示虛擬付款頁面
-    return render_template('payment.html', total=total_amount)
+        total_amount = sum(item['價格'] for item in cart)
 
+        if request.method == 'POST':
+            user_carts[user_id] = []  # 清空購物車
+            return redirect(url_for('payment_success', total=total_amount))
+
+        # 將 cart 傳給模板，作為訂單的資料
+        return render_template('payment.html', total=total_amount, orders=cart)
+    
+    except Exception as e:
+        print(f"Error in payment route: {e}")
+        return render_template('error.html', message="發生錯誤，請稍後再試。")
+        
 # 付款成功頁面
 @app.route("/payment_success")
 def payment_success():
