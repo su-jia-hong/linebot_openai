@@ -87,22 +87,27 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
-        cart = user_carts.get(user_id, [])
-        if not cart:
-            return render_template('error.html', message="購物車是空的，無法進行付款。")
-
-        total_amount = sum(item['價格'] for item in cart)
+        # 假設這裡是你的訂單資料，類似你提供的 JSON 結構
+        order = {
+            "amount": 100,
+            "productName": "ithome",
+            "productImageUrl": "https://ithelp.ithome.com.tw/images/ironman/11th/event/kv_event/kv-bg-addfly.png",
+            "confirmUrl": "http://127.0.0.1:3000",
+            "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
+            "currency": "TWD"
+        }
 
         if request.method == 'POST':
-            user_carts[user_id] = []  # 清空購物車
-            return redirect(url_for('payment_success', total=total_amount))
+            # 模擬付款成功後的跳轉
+            return redirect(order["confirmUrl"])
 
-        # 將 cart 傳給模板，作為訂單的資料
-        return render_template('payment.html', total=total_amount, orders=cart)
-    
+        # 將訂單資料傳給模板
+        return render_template('payment.html', order=order)
+
     except Exception as e:
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
+)
         
 # 付款成功頁面
 @app.route("/payment_success")
