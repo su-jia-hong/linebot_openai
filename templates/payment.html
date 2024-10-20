@@ -54,11 +54,10 @@
     </style>
 </head>
 <body>
-    <div class="payment-container">
-        <img src="https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg" 
-             alt="Product Image" class="product-image">
+        <div class="payment-container">
+        <img src="{{ order.productImageUrl }}" alt="Product Image" class="product-image">
         <div class="product-name">{{ order.productName }}</div>
-        <div class="product-amount">{{ order.amount }} {{ order.currency }}</div>
+        <div class="product-amount">總金額: {{ order.amount }} {{ order.currency }}</div>
     
         <form method="POST">
             <button type="submit" class="confirm-button">確認付款</button>
