@@ -89,27 +89,18 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
-        # 取得使用者購物車資料
-        cart = user_carts.get(user_id, [])
-        
-        # 計算總金額
-        total_amount = sum(item['價格'] for item in cart)
-        
-        # 訂單資料
         order = {
-            "amount": total_amount,  # 使用總金額
-            "productName": "購物車內商品",
-            "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
-            "confirmUrl": "http://127.0.0.1:3000/payment_success",
+            "amount": sum(item['價格'] for item in user_carts.get(user_id, [])),
+            "productName": "ithome",
+            "productImageUrl": "https://ithelp.ithome.com.tw/images/ironman/11th/event/kv_event/kv-bg-addfly.png",
+            "confirmUrl": f"http://127.0.0.1:3000/payment_success?user_id={user_id}",
             "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
             "currency": "TWD"
         }
 
         if request.method == 'POST':
-            # 模擬付款成功後跳轉至付款成功頁面
-            return redirect(url_for('payment_success', total=total_amount))
+            return redirect(order["confirmUrl"])
 
-        # 將訂單資料傳遞給模板
         return render_template('payment.html', order=order)
 
     except Exception as e:
@@ -121,8 +112,15 @@ def payment(user_id):
 # 付款成功頁面
 @app.route("/payment_success")
 def payment_success():
+    user_id = request.args.get('user_id')  # 從參數獲取 user_id
     total = request.args.get('total', 0)
+
+    # 清空購物車
+    if user_id in user_carts:
+        user_carts[user_id] = []
+
     return f"<h1>付款成功！總金額為 {total} 元</h1>"
+
 
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
