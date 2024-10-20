@@ -1,19 +1,21 @@
-#付款
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>付款頁面</title>
 </head>
 <body>
-    <h1>付款頁面</h1>
+    <h1>總金額為 {{ total }} 元</h1>
 
-    <p>商品名稱：{{ order.productName }}</p>
-    <img src="{{ order.productImageUrl }}" alt="Product Image" width="300" />
-
-    <p>金額：{{ order.amount }} {{ order.currency }}</p>
-    <p>訂單編號：{{ order.orderId }}</p>
+    <h2>訂單明細：</h2>
+    <ul>
+        {% for order in orders %}
+            <li>
+                <p>商品名稱：{{ order.productName }}</p>
+                <p>價格：{{ order.價格 }} 元</p>
+            </li>
+        {% endfor %}
+    </ul>
 
     <form method="POST">
         <button type="submit">確認付款</button>
