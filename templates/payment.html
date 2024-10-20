@@ -55,11 +55,10 @@
 </head>
 <body>
     <div class="payment-container">
-        <!-- 從 templates 資料夾載入圖片 -->
-        <img src="{{ url_for('static', filename='S__80822274.jpg') }}" alt="Product Image" class="product-image">
-        
-        <div class="product-name">ithome</div>
-        <div class="product-amount">100 TWD</div>
+        <img src="https://drive.google.com/uc?id=1HZyIbc6Ue-ku3VpWefriKwvQ_D8nGrVs" 
+             alt="Product Image" class="product-image">
+        <div class="product-name">{{ order.productName }}</div>
+        <div class="product-amount">{{ order.amount }} {{ order.currency }}</div>
 
         <form method="POST">
             <button type="submit" class="confirm-button">確認付款</button>
