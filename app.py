@@ -108,7 +108,7 @@ def payment(user_id):
     except Exception as e:
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
-)
+
         
 # 付款成功頁面
 @app.route("/payment_success")
