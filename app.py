@@ -225,16 +225,16 @@ def handle_message(event):
     
     if '付款' in user_message:
     # 獲取桌號
-    if '桌號' not in response_text:
-        response_text += "\n請提供您的桌號："
-    else:
-        # 如果已經獲取了桌號，可以引導至付款頁面
-        table_number = extract_table_number(user_message)  # 確保有一個方法來提取桌號
-        if table_number:
-            payment_url = f"{request.url_root}payment/{user_id}?table={table_number}"
-            response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+        if '桌號' not in response_text:
+            response_text += "\n請提供您的桌號："
         else:
-            response_text += "\n請提供有效的桌號。"
+        # 如果已經獲取了桌號，可以引導至付款頁面
+            table_number = extract_table_number(user_message)  # 確保有一個方法來提取桌號
+            if table_number:
+                payment_url = f"{request.url_root}payment/{user_id}?table={table_number}"
+                response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+            else:
+                response_text += "\n請提供有效的桌號。"
 
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
