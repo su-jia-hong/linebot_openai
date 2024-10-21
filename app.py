@@ -206,13 +206,22 @@ def handle_message(event):
         ]
     )
     
-    response_text = response.choices[0].message.content
+    bot_response = response['choices'][0]['message']['content'].strip()
     
-    # 提取並處理購物車品項
-    items = extract_item_name(response_text)
+    table_number = extract_table_number(user_message)
+    if table_number:
+        store_table_number(user_id, table_number)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"好的，您的桌號是 {table_number} 號。")
+        )
+        return
+
+    items = extract_item_name(bot_response)
+    response_text = ""
     for item_name, quantity in items:
         if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
+            remove_from_cart_response = remove_item_from_cart(user_id, item_name, quantity)
             response_text += f"\n{remove_from_cart_response['message']}"
         else:
             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
@@ -224,17 +233,19 @@ def handle_message(event):
         response_text += f"\n{cart_display}"
     
     if '付款' in user_message:
-    # 獲取桌號
-        if '桌號' not in response_text:
-            response_text += "\n請提供您的桌號："
-        else:
-        # 如果已經獲取了桌號，可以引導至付款頁面
-            table_number = extract_table_number(user_message)  # 確保有一個方法來提取桌號
-            if table_number:
-                payment_url = f"{request.url_root}payment/{user_id}?table={table_number}"
-                response_text = f"請點擊以下連結進行付款：\n{payment_url}"
-            else:
-                response_text += "\n請提供有效的桌號。"
+        if user_id not in user_tables:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請告訴我您的桌號或說明是否外帶。")
+            )
+            return
+
+        payment_url = url_for('payment', user_id=user_id, _external=True)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"請點擊以下連結進行付款：\n{payment_url}")
+        )
+        return
 
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
