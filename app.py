@@ -91,23 +91,21 @@ def payment(user_id):
     try:
         # 取得使用者購物車資料
         cart = user_carts.get(user_id, [])
-        
-        # 計算總金額
         total_amount = sum(item['價格'] for item in cart)
-        
-        # 訂單資料
+
+        # 模擬付款頁面資料
         order = {
-            "amount": total_amount,  # 使用總金額
+            "amount": total_amount,
             "productName": "購物車內商品",
             "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
-            "confirmUrl": "http://127.0.0.1:3000/payment_success",
-            "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
+            "confirmUrl": f"{request.url_root}payment_success/{user_id}?total={total_amount}",
+            "orderId": datetime.now().strftime('%m%d%H%M%S'),  # 動態訂單編號
             "currency": "TWD"
         }
 
         if request.method == 'POST':
-            # 模擬付款成功後跳轉至付款成功頁面
-            return redirect(url_for('payment_success', total=total_amount))
+            # 模擬付款成功後跳轉到 payment_success 頁面
+            return redirect(order["confirmUrl"])
 
         # 將訂單資料傳遞給模板
         return render_template('payment.html', order=order)
@@ -117,50 +115,74 @@ def payment(user_id):
         return render_template('error.html', message="發生錯誤，請稍後再試。")
 
 
-        
-# 付款成功頁面
-@app.route("/payment_success")
-def payment_success():
-    total = request.args.get('total', 0)
-    return f"<h1>付款成功！總金額為 {total} 元</h1>"
+# 付款成功頁面並上傳訂單至 Google Sheets
+@app.route("/payment_success/<user_id>")
+def payment_success(user_id):
+    try:
+        # 上傳訂單資料至 Google Sheets
+        order_confirmation = confirm_order(user_id)
+
+        # 確認上傳是否成功
+        if order_confirmation["message"].startswith("訂單已確認"):
+            total_amount = request.args.get('total', 0)
+            return f"<h1>付款成功！總金額為 {total_amount} 元</h1><p>{order_confirmation['message']}</p>"
+        else:
+            return f"<h1>付款失敗</h1><p>{order_confirmation['message']}</p>"
+
+    except Exception as e:
+        print(f"Error in payment_success route: {e}")
+        return render_template('error.html', message="付款完成，但訂單上傳失敗。請聯繫客服。")
+
+
 
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
-    
-    google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
-    if not google_credentials_json:
-        return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
-    
-    credentials_dict = json.loads(google_credentials_json)
-    gc = gspread.service_account_from_dict(credentials_dict)
-    
-    sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID')
-    worksheet = sh.get_worksheet(1)
-    
-    cart_summary = {}
-    for item in cart:
-        if item['品項'] in cart_summary:
-            cart_summary[item['品項']]['數量'] += 1
-        else:
-            cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
-    
-    order_df = pd.DataFrame([
-        {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
-        for item_name, details in cart_summary.items()
-    ])
-    
-    order_df['總價'] = order_df['價格'] * order_df['數量']
-    order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
-    
-    data = [order_df.columns.values.tolist()] + order_df.values.tolist()
-    worksheet.insert_rows(data, 1)
-    
-    user_carts[user_id] = []
-    return {"message": "訂單已確認並更新到 Google Sheets。"}
+
+    try:
+        # 驗證 Google 憑證
+        google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+        if not google_credentials_json:
+            return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
+        
+        credentials_dict = json.loads(google_credentials_json)
+        gc = gspread.service_account_from_dict(credentials_dict)
+
+        # 開啟 Google Sheets 並選擇工作表
+        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID')
+        worksheet = sh.get_worksheet(1)
+
+        # 整理訂單資料
+        cart_summary = {}
+        for item in cart:
+            if item['品項'] in cart_summary:
+                cart_summary[item['品項']]['數量'] += 1
+            else:
+                cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
+
+        order_df = pd.DataFrame([
+            {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
+            for item_name, details in cart_summary.items()
+        ])
+
+        order_df['總價'] = order_df['價格'] * order_df['數量']
+        order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+
+        # 將資料寫入工作表
+        data = [order_df.columns.values.tolist()] + order_df.values.tolist()
+        worksheet.insert_rows(data, 1)
+
+        # 清空購物車
+        user_carts[user_id] = []
+        return {"message": "訂單已確認並更新到 Google Sheets。"}
+
+    except Exception as e:
+        print(f"Error in confirm_order: {e}")
+        return {"message": "上傳訂單失敗，請稍後再試。"}
+
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -216,11 +238,11 @@ def handle_message(event):
     if '查看購物車' in user_message:
         cart_display = display_cart(user_id)
         response_text += f"\n{cart_display}"
-    
-    if '付款' in user_message:
-        # 引導至付款頁面
-        payment_url = f"{request.url_root}payment/{user_id}"
-        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+
+    if '付款' in user_message or '確認訂單' in user_message:
+    # 引導至付款頁面，附帶 user_id
+    payment_url = f"{request.url_root}payment/{user_id}"
+    response_text = f"請點擊以下連結進行付款：\n{payment_url}"
     
     # 確認訂單功能
     if '確認訂單' in user_message or '送出訂單' in user_message:
