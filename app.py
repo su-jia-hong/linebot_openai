@@ -164,6 +164,10 @@ def confirm_order(user_id):
     user_carts[user_id] = []
     return {"message": "訂單已確認並更新到 Google Sheets。"}
 
+def store_table_number(user_id, table_number):
+    user_tables[user_id] = table_number
+    return {"message": f"您的桌號是 {table_number} 號。"}
+
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -241,16 +245,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             payment_url = url_for('payment', user_id=user_id, _external=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"請前往以下連結完成付款：{payment_url}"))
-    
-    # 當回應包含桌號時，儲存桌號並確認訂單
-    # table_number_match = re.search(r'桌號\s*(\d+)', user_message)
-    # if table_number_match:
-    #     table_number = table_number_match.group(1)
-    #     user_tables[user_id] = table_number
-    #     confirm_msg = "您的桌號已確認，請進行下一步操作。"
-    #     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=confirm_msg))
-    #     return
-
 
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
