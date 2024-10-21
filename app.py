@@ -10,6 +10,7 @@ import pandas as pd
 import re
 from datetime import datetime
 
+
 app = Flask(__name__)
 # 初始化 LINE Bot
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -25,6 +26,7 @@ try:
 except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
+
 
 # 初始化全局購物車字典
 user_carts = {}
@@ -87,22 +89,34 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
+        # 取得使用者購物車資料
         cart = user_carts.get(user_id, [])
-        if not cart:
-            return render_template('error.html', message="購物車是空的，無法進行付款。")
-
+        
+        # 計算總金額
         total_amount = sum(item['價格'] for item in cart)
+        
+        # 訂單資料
+        order = {
+            "amount": total_amount,  # 使用總金額
+            "productName": "購物車內商品",
+            "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
+            "confirmUrl": "http://127.0.0.1:3000/payment_success",
+            "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
+            "currency": "TWD"
+        }
 
         if request.method == 'POST':
-            user_carts[user_id] = []  # 清空購物車
+            # 模擬付款成功後跳轉至付款成功頁面
             return redirect(url_for('payment_success', total=total_amount))
 
-        # 將 cart 傳給模板，作為訂單的資料
-        return render_template('payment.html', total=total_amount, orders=cart)
-    
+        # 將訂單資料傳遞給模板
+        return render_template('payment.html', order=order)
+
     except Exception as e:
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
+
+
         
 # 付款成功頁面
 @app.route("/payment_success")
