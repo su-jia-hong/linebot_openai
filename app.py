@@ -170,10 +170,10 @@ def confirm_order(user_id):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
         table_number = ""
         name = "" 
-        phone = "" 
-        note = "" 
+        phone = ""  
         payment_method = "Line Pay" 
         total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())
+        note = ""
 
         # 按照指定格式準備資料
         order_data = [
