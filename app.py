@@ -228,8 +228,8 @@ def handle_message(event):
     if '確認訂單' in user_message or '送出訂單' in user_message:
         order_confirmation = confirm_order(user_id)
         response_text += f"\n{order_confirmation['message']}"
-
-     if "結帳" in user_message or "付款" in user_message:
+        
+    if "結帳" in user_message or "付款" in user_message:
         if user_id not in user_tables:
             reply = "請輸入您的桌號以便我們確認您的訂單。"
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
