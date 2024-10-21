@@ -153,7 +153,7 @@ def confirm_order(user_id):
 
         # 開啟 Google Sheets 並選擇工作表
         sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
-        worksheet = sh.get_worksheet(0)
+        worksheet = sh.get_worksheet(1)
 
         # 整理訂單資料
         cart_summary = {}
@@ -167,17 +167,17 @@ def confirm_order(user_id):
         cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
 
         # 訂單的額外資訊
-        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S') 
-        table_number = ""
-        name = "" 
-        phone = ""  
-        payment_method = "Line Pay" 
-        total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())
-        note = ""
+        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')  # 訂單時間
+        table_number = ""  # 桌號
+        name = ""  # 姓名
+        phone = ""  # 電話
+        payment_method = "Line Pay"  # 付款方式
+        total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())  # 計算總價
+        note = ""  # 備註
 
         # 按照指定格式準備資料
         order_data = [
-            [timestamp, table_number, name, phone, note, payment_method, cart_items_str, total_price]
+            [timestamp, table_number, name, phone, payment_method, cart_items_str, total_price, note]
         ]
 
         # 將訂單資料追加到表格的末尾
@@ -190,6 +190,7 @@ def confirm_order(user_id):
     except Exception as e:
         print(f"Error in confirm_order: {e}")
         return {"message": "上傳訂單失敗，請稍後再試。"}
+
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
