@@ -239,7 +239,7 @@ def handle_message(event):
         cart_display = display_cart(user_id)
         response_text += f"\n{cart_display}"
 
-    if '付款'  in user_message:
+    if '付款'  in user_message or '確認訂單' in user_message:
         # 引導至付款頁面，附帶 user_id
         payment_url = f"{request.url_root}payment/{user_id}"
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
