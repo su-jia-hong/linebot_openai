@@ -26,7 +26,6 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-
 # 初始化全局購物車字典
 user_carts = {}
 
