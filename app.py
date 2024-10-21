@@ -167,7 +167,7 @@ def confirm_order(user_id):
         cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
 
         # 訂單的額外資訊
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
+        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S') 
         table_number = ""
         name = "" 
         phone = ""  
