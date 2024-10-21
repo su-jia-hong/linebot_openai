@@ -37,6 +37,7 @@ def chinese_to_number(chinese):
                         '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
     return chinese_numerals.get(chinese, 0)
 
+
 # 提取品項名稱和數量
 def extract_item_name(response):
     matches = re.findall(r'(\d+|[一二兩三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
