@@ -10,7 +10,6 @@ import pandas as pd
 import re
 from datetime import datetime
 
-
 app = Flask(__name__)
 # 初始化 LINE Bot
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -27,10 +26,8 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-
 # 初始化全局購物車字典
 user_carts = {}
-user_tables = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
@@ -90,34 +87,22 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
-        # 取得使用者購物車資料
         cart = user_carts.get(user_id, [])
-        
-        # 計算總金額
+        if not cart:
+            return render_template('error.html', message="購物車是空的，無法進行付款。")
+
         total_amount = sum(item['價格'] for item in cart)
-        
-        # 訂單資料
-        order = {
-            "amount": total_amount,  # 使用總金額
-            "productName": "購物車內商品",
-            "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
-            "confirmUrl": "http://127.0.0.1:3000/payment_success",
-            "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
-            "currency": "TWD"
-        }
 
         if request.method == 'POST':
-            # 模擬付款成功後跳轉至付款成功頁面
+            user_carts[user_id] = []  # 清空購物車
             return redirect(url_for('payment_success', total=total_amount))
 
-        # 將訂單資料傳遞給模板
-        return render_template('payment.html', order=order)
-
+        # 將 cart 傳給模板，作為訂單的資料
+        return render_template('payment.html', total=total_amount, orders=cart)
+    
     except Exception as e:
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
-
-
         
 # 付款成功頁面
 @app.route("/payment_success")
@@ -156,17 +141,12 @@ def confirm_order(user_id):
     order_df['總價'] = order_df['價格'] * order_df['數量']
     order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
-    order_df['桌號'] = table_number
     
     data = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data, 1)
     
     user_carts[user_id] = []
     return {"message": "訂單已確認並更新到 Google Sheets。"}
-
-def store_table_number(user_id, table_number):
-    user_tables[user_id] = table_number
-    return {"message": f"您的桌號是 {table_number} 號。"}
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -206,22 +186,13 @@ def handle_message(event):
         ]
     )
     
-    bot_response = response['choices'][0]['message']['content'].strip()
+    response_text = response.choices[0].message.content
     
-    table_number = extract_table_number(user_message)
-    if table_number:
-        store_table_number(user_id, table_number)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"好的，您的桌號是 {table_number} 號。")
-        )
-        return
-
-    items = extract_item_name(bot_response)
-    response_text = ""
+    # 提取並處理購物車品項
+    items = extract_item_name(response_text)
     for item_name, quantity in items:
         if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_item_from_cart(user_id, item_name, quantity)
+            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
             response_text += f"\n{remove_from_cart_response['message']}"
         else:
             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
@@ -233,19 +204,15 @@ def handle_message(event):
         response_text += f"\n{cart_display}"
     
     if '付款' in user_message:
-        if user_id not in user_tables:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="請告訴我您的桌號或說明是否外帶。")
-            )
-            return
+        # 引導至付款頁面
+        payment_url = f"{request.url_root}payment/{user_id}"
+        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+    
+    # 確認訂單功能
+    if '確認訂單' in user_message or '送出訂單' in user_message:
+        order_confirmation = confirm_order(user_id)
+        response_text += f"\n{order_confirmation['message']}"
 
-        payment_url = url_for('payment', user_id=user_id, _external=True)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"請點擊以下連結進行付款：\n{payment_url}")
-        )
-        return
 
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
