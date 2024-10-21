@@ -27,9 +27,9 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-
-# 初始化全局購物車字典
+# 初始化全局購物車字典和桌號字典
 user_carts = {}
+user_tables = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
@@ -114,33 +114,36 @@ def payment(user_id):
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
 
-
 # 付款成功頁面並上傳訂單至 Google Sheets
-@app.route("/payment_success/<user_id>")
+@app.route("/payment_success/<user_id>", methods=['GET', 'POST'])
 def payment_success(user_id):
     try:
-        # 上傳訂單資料至 Google Sheets
-        order_confirmation = confirm_order(user_id)
+        if request.method == 'POST':
+            table_number = request.form.get('table_number')
+            user_tables[user_id] = table_number  # 儲存桌號
+            
+            # 上傳訂單資料至 Google Sheets
+            order_confirmation = confirm_order(user_id, table_number)
 
-        # 確認上傳是否成功
-        if order_confirmation["message"].startswith("訂單已確認"):
-            total_amount = request.args.get('total', 0)
-            return f"<h1>付款成功！總金額為 {total_amount} 元</h1><p>{order_confirmation['message']}</p>"
+            # 確認上傳是否成功
+            if order_confirmation["message"].startswith("訂單已確認"):
+                total_amount = request.args.get('total', 0)
+                return f"<h1>付款成功！總金額為 {total_amount} 元</h1><p>{order_confirmation['message']}</p>"
+            else:
+                return f"<h1>付款失敗</h1><p>{order_confirmation['message']}</p>"
         else:
-            return f"<h1>付款失敗</h1><p>{order_confirmation['message']}</p>"
+            return render_template('ask_table.html', user_id=user_id)
 
     except Exception as e:
         print(f"Error in payment_success route: {e}")
         return render_template('error.html', message="付款完成，但訂單上傳失敗。請聯繫客服。")
 
-
-
 # 確認訂單並更新到 Google Sheets
-def confirm_order(user_id):
+def confirm_order(user_id, table_number):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
-
+    
     try:
         # 驗證 Google 憑證
         google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
@@ -170,6 +173,7 @@ def confirm_order(user_id):
         order_df['總價'] = order_df['價格'] * order_df['數量']
         order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+        order_df['桌號'] = table_number  # 新增桌號欄位
 
         # 將資料寫入工作表
         data = [order_df.columns.values.tolist()] + order_df.values.tolist()
@@ -203,59 +207,41 @@ def handle_message(event):
     user_message = event.message.text.strip()
     # 將 DataFrame 轉換為字串
     info_str = data.to_string(index=False)
-    user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
+    user_id = event.source.user_id
+
+    if "查看菜單" in user_message:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=info_str)
+        )
     
-    # 使用 OpenAI 生成回應
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-            {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
-            {"role": "system", "content": "當客人點的餐有兩個以上的品項時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？另外再加一片巧克力厚片，價格是40元。請問還有其他需要幫忙的嗎？' "},
-            {"role": "system", "content": "當客人說到刪除或移除字眼時，請務必回復刪除多少數量加品項，例如：'好的，已刪除一杯美式' "},
-            # {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"}
-            {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
-            {"role": "system", "content": "answer the question considering the following data: " + info_str},
-            {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
-            {"role": "system", "content": "當使用者傳送'使用教學'這兩個字時，請回復'好的以上是我們的使用教學'"},
-            {"role": "user", "content": user_message}
-        ]
-    )
-    
-    response_text = response.choices[0].message.content
-    
-    # 提取並處理購物車品項
-    items = extract_item_name(response_text)
-    for item_name, quantity in items:
-        if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
-            response_text += f"\n{remove_from_cart_response['message']}"
-        else:
-            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-            response_text += f"\n{add_to_cart_response['message']}"
+    elif "加入" in user_message:
+        items = extract_item_name(user_message)
+        response_messages = []
+        for item_name, quantity in items:
+            response = add_item_to_cart(user_id, item_name, quantity)
+            response_messages.append(response['message'])
         
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
-
-    if '付款'  in user_message or '確認訂單' in user_message:
-        # 引導至付款頁面，附帶 user_id
-        payment_url = f"{request.url_root}payment/{user_id}"
-        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
-
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="\n".join(response_messages))
+        )
     
-    # # 確認訂單功能
-    # if '確認訂單' in user_message  in user_message:
-    #     order_confirmation = confirm_order(user_id)
-    #     response_text += f"\n{order_confirmation['message']}"
+    elif "查看購物車" in user_message:
+        cart_contents = display_cart(user_id)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=cart_contents)
+        )
+    
+    elif "確認訂單" in user_message:
+        # 轉至付款頁面
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="即將轉至付款頁面，請稍候...")
+        )
+        return redirect(url_for('payment', user_id=user_id))
 
-
-    # 回應 LINE Bot 用戶
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# 啟動 Flask 應用程式
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
