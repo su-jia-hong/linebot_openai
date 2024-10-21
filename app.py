@@ -33,13 +33,13 @@ user_carts = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
-    chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, 
+    chinese_numerals = {'一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5, 
                         '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
     return chinese_numerals.get(chinese, 0)
 
 # 提取品項名稱和數量
 def extract_item_name(response):
-    matches = re.findall(r'(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
+    matches = re.findall(r'(\d+|[一二兩三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
     items = []
     for match in matches:
         quantity = int(match[0]) if match[0].isdigit() else chinese_to_number(match[0])
