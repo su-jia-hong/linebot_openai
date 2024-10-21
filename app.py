@@ -153,7 +153,7 @@ def confirm_order(user_id):
 
         # 開啟 Google Sheets 並選擇工作表
         sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
-        worksheet = sh.get_worksheet(0)
+        worksheet = sh.get_worksheet(1)
 
         # 整理訂單資料
         cart_summary = {}
@@ -163,16 +163,25 @@ def confirm_order(user_id):
             else:
                 cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
 
-        order_df = pd.DataFrame([{'品項': item_name, '價格': details['價格'], '數量': details['數量']}
-                                 for item_name, details in cart_summary.items()])
+        # 整理餐點內容為字符串
+        cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
 
-        order_df['總價'] = order_df['價格'] * order_df['數量']
-        order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+        # 訂單的額外資訊
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S') 
+        table_number = ""
+        name = "" 
+        phone = "" 
+        note = "" 
+        payment_method = "Line Pay" 
+        total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())
 
-        # 將資料寫入工作表末尾
-        data = [order_df.columns.values.tolist()] + order_df.values.tolist()
-        worksheet.append_rows(data)  # 使用 append_rows 將資料追加到表格末尾
+        # 按照指定格式準備資料
+        order_data = [
+            [timestamp, table_number, name, phone, note, payment_method, cart_items_str, total_price]
+        ]
+
+        # 將訂單資料追加到表格的末尾
+        worksheet.append_rows(order_data)
 
         # 清空購物車
         user_carts[user_id] = []
@@ -181,7 +190,6 @@ def confirm_order(user_id):
     except Exception as e:
         print(f"Error in confirm_order: {e}")
         return {"message": "上傳訂單失敗，請稍後再試。"}
-
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
