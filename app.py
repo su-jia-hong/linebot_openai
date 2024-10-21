@@ -89,21 +89,27 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
+        # 取得使用者購物車資料
         cart = user_carts.get(user_id, [])
+        
+        # 計算總金額
         total_amount = sum(item['價格'] for item in cart)
-
+        
+        # 訂單資料
         order = {
-            "amount": total_amount,
+            "amount": total_amount,  # 使用總金額
             "productName": "購物車內商品",
             "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
-            "confirmUrl": f"{request.url_root}payment_success?user_id={user_id}&total={total_amount}",
-            "orderId": datetime.now().strftime('%Y%m%d%H%M%S'),
+            "confirmUrl": "http://127.0.0.1:3000/payment_success",
+            "orderId": "B858CB282617FB0956D960215C8E84D1CCF909C6",
             "currency": "TWD"
         }
 
         if request.method == 'POST':
-            return redirect(order['confirmUrl'])
+            # 模擬付款成功後跳轉至付款成功頁面
+            return redirect(url_for('payment_success', total=total_amount))
 
+        # 將訂單資料傳遞給模板
         return render_template('payment.html', order=order)
 
     except Exception as e:
@@ -115,19 +121,14 @@ def payment(user_id):
 # 付款成功頁面
 @app.route("/payment_success")
 def payment_success():
-    user_id = request.args.get('user_id')
     total = request.args.get('total', 0)
-
-    # 上傳訂單到 Google Sheets
-    order_confirmation = upload_order_to_sheets(user_id)
-
-    return f"<h1>付款成功！總金額為 {total} 元</h1><p>{order_confirmation['message']}</p>"
+    return f"<h1>付款成功！總金額為 {total} 元</h1>"
 
 # 確認訂單並更新到 Google Sheets
-def upload_order_to_sheets(user_id):
+def confirm_order(user_id):
     cart = user_carts.get(user_id, [])
     if not cart:
-        return {"message": "購物車是空的，無法上傳訂單。"}
+        return {"message": "購物車是空的，無法確認訂單。"}
     
     google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
     if not google_credentials_json:
@@ -138,7 +139,7 @@ def upload_order_to_sheets(user_id):
     
     sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID')
     worksheet = sh.get_worksheet(1)
-
+    
     cart_summary = {}
     for item in cart:
         if item['品項'] in cart_summary:
@@ -157,9 +158,9 @@ def upload_order_to_sheets(user_id):
     
     data = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data, 1)
-
+    
     user_carts[user_id] = []
-    return {"message": "訂單已成功上傳到 Google Sheets。"}
+    return {"message": "訂單已確認並更新到 Google Sheets。"}
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
