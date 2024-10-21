@@ -10,7 +10,6 @@ import pandas as pd
 import re
 from datetime import datetime
 
-
 app = Flask(__name__)
 # 初始化 LINE Bot
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -26,7 +25,6 @@ try:
 except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
-
 
 # 初始化全局購物車字典
 user_carts = {}
@@ -108,7 +106,7 @@ def payment(user_id):
 
         if request.method == 'POST':
             # 模擬付款成功後跳轉至付款成功頁面
-            return redirect(url_for('payment_success', total=total_amount))
+            return redirect(url_for('payment_success', total=total_amount, user_id=user_id))
 
         # 將訂單資料傳遞給模板
         return render_template('payment.html', order=order)
@@ -117,24 +115,23 @@ def payment(user_id):
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
 
-
-        
 # 付款成功頁面
 @app.route("/payment_success")
 def payment_success():
     total = request.args.get('total', 0)
+    user_id = request.args.get('user_id', None)
+    if user_id and user_id in user_tables:
+        table_number = user_tables.pop(user_id)
+        order_confirmation = confirm_order(user_id, table_number)
+        return f"<h1>付款成功！總金額為 {total} 元</h1><p>{order_confirmation['message']}</p>"
     return f"<h1>付款成功！總金額為 {total} 元</h1>"
 
 # 確認訂單並更新到 Google Sheets
-# 確認訂單並更新到 Google Sheets
-def confirm_order(user_id, table_number=None):
+def confirm_order(user_id, table_number):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
     
-    if not table_number:
-        return {"message": "請輸入桌號。"}
-
     google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
     if not google_credentials_json:
         return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
@@ -168,7 +165,6 @@ def confirm_order(user_id, table_number=None):
     user_carts[user_id] = []
     return {"message": "訂單已確認並更新到 Google Sheets。"}
 
-
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -195,68 +191,53 @@ def handle_message(event):
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
-            {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
-            {"role": "system", "content": "當客人點的餐有兩個以上的品項時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？另外再加一片巧克力厚片，價格是40元。請問還有其他需要幫忙的嗎？' "},
-            {"role": "system", "content": "當客人說到刪除或移除字眼時，請務必回復刪除多少數量加品項，例如：'好的，已刪除一杯美式' "},
-            # {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"}
-            {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
-            {"role": "system", "content": "answer the question considering the following data: " + info_str},
-            {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
-            {"role": "system", "content": "當使用者傳送'使用教學'這兩個字時，請回復'好的以上是我們的使用教學'"},
-            {"role": "user", "content": user_message}
+            {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要熱的還是冰的。"},
+            {"role": "user", "content": user_message},
+            {"role": "system", "content": info_str}
         ]
     )
     
-    response_text = response.choices[0].message.content
+    reply = response['choices'][0]['message']['content']
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
     
-    # 提取並處理購物車品項
-    items = extract_item_name(response_text)
-    for item_name, quantity in items:
-        if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
-            response_text += f"\n{remove_from_cart_response['message']}"
-        else:
-            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-            response_text += f"\n{add_to_cart_response['message']}"
-        
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
+    # 增加品項到購物車
+    extracted_items = extract_item_name(reply)
+    if extracted_items:
+        for item_name, quantity in extracted_items:
+            add_item_to_cart(user_id, item_name, quantity)
     
-    if '付款' in user_message:
-        # 引導至付款頁面
-        payment_url = f"{request.url_root}payment/{user_id}"
-        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
-    
-    # 確認訂單功能
-    # if '確認訂單' in user_message or '送出訂單' in user_message:
-    #     order_confirmation = confirm_order(user_id)
-    #     response_text += f"\n{order_confirmation['message']}"
-
-    
-    if '確認訂單' in user_message or '送出訂單' in user_message:
+    # 當回應包含"結帳"時，進行付款處理
+    if "結帳" in user_message or "付款" in user_message:
         if user_id not in user_tables:
-            response_text = "請輸入您的桌號："
-            user_tables[user_id] = True  # 設置一個標誌，表明我們正在等待桌號
-        else:
-            table_number = user_message  # 假設用戶下一條訊息是桌號
-            order_confirmation = confirm_order(user_id, table_number)
-            response_text = order_confirmation['message']
-            user_tables.pop(user_id, None)  # 清除桌號等待標誌
+            reply = "請輸入您的桌號以便我們確認您的訂單。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            return
+
+        # 確認桌號後處理訂單付款
+        if user_id in user_tables:
+            reply = "您的訂單將進行付款處理，請稍候..."
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            payment_url = url_for('payment', user_id=user_id, _external=True)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"請前往以下連結完成付款：{payment_url}"))
     
-    elif user_id in user_tables:
-        table_number = user_message  # 假設用戶下一條訊息是桌號
-        order_confirmation = confirm_order(user_id, table_number)
-        response_text = order_confirmation['message']
-        user_tables.pop(user_id, None)  # 清除桌號等待標誌
+    # 當回應包含桌號時，儲存桌號並確認訂單
+    table_number_match = re.search(r'桌號\s*(\d+)', user_message)
+    if table_number_match:
+        table_number = table_number_match.group(1)
+        user_tables[user_id] = table_number
+        confirm_msg = "您的桌號已確認，請進行下一步操作。"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=confirm_msg))
+        return
 
+    # 回應購物車內容
+    if "購物車" in user_message:
+        cart_content = display_cart(user_id)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=cart_content))
+    
+    # 清空購物車
+    if "清空購物車" in user_message:
+        user_carts[user_id] = []
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="購物車已清空。"))
 
-    # 回應 LINE Bot 用戶
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
