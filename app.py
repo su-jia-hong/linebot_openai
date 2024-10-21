@@ -30,6 +30,7 @@ except Exception as e:
 
 # 初始化全局購物車字典
 user_carts = {}
+user_tables = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
@@ -125,11 +126,15 @@ def payment_success():
     return f"<h1>付款成功！總金額為 {total} 元</h1>"
 
 # 確認訂單並更新到 Google Sheets
-def confirm_order(user_id):
+# 確認訂單並更新到 Google Sheets
+def confirm_order(user_id, table_number=None):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
     
+    if not table_number:
+        return {"message": "請輸入桌號。"}
+
     google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
     if not google_credentials_json:
         return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
@@ -155,12 +160,14 @@ def confirm_order(user_id):
     order_df['總價'] = order_df['價格'] * order_df['數量']
     order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+    order_df['桌號'] = table_number  # 增加桌號欄位
     
     data = [order_df.columns.values.tolist()] + order_df.values.tolist()
     worksheet.insert_rows(data, 1)
     
     user_carts[user_id] = []
     return {"message": "訂單已確認並更新到 Google Sheets。"}
+
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -223,9 +230,26 @@ def handle_message(event):
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
     
     # 確認訂單功能
+    # if '確認訂單' in user_message or '送出訂單' in user_message:
+    #     order_confirmation = confirm_order(user_id)
+    #     response_text += f"\n{order_confirmation['message']}"
+
+    
     if '確認訂單' in user_message or '送出訂單' in user_message:
-        order_confirmation = confirm_order(user_id)
-        response_text += f"\n{order_confirmation['message']}"
+        if user_id not in user_tables:
+            response_text = "請輸入您的桌號："
+            user_tables[user_id] = True  # 設置一個標誌，表明我們正在等待桌號
+        else:
+            table_number = user_message  # 假設用戶下一條訊息是桌號
+            order_confirmation = confirm_order(user_id, table_number)
+            response_text = order_confirmation['message']
+            user_tables.pop(user_id, None)  # 清除桌號等待標誌
+    
+    elif user_id in user_tables:
+        table_number = user_message  # 假設用戶下一條訊息是桌號
+        order_confirmation = confirm_order(user_id, table_number)
+        response_text = order_confirmation['message']
+        user_tables.pop(user_id, None)  # 清除桌號等待標誌
 
 
     # 回應 LINE Bot 用戶
