@@ -10,6 +10,7 @@ import pandas as pd
 import re
 from datetime import datetime
 
+
 app = Flask(__name__)
 # 初始化 LINE Bot
 line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
@@ -26,20 +27,19 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-# 初始化全局購物車字典、桌號
+
+# 初始化全局購物車字典
 user_carts = {}
-user_states = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
-    chinese_numerals = {'一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5, 
+    chinese_numerals = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, 
                         '六': 6, '七': 7, '八': 8, '九': 9, '十': 10}
     return chinese_numerals.get(chinese, 0)
 
-
 # 提取品項名稱和數量
 def extract_item_name(response):
-    matches = re.findall(r'(\d+|[一二兩三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
+    matches = re.findall(r'(\d+|[一二三四五六七八九十])\s*(杯|片|份|個)\s*([\w\s]+)', response)
     items = []
     for match in matches:
         quantity = int(match[0]) if match[0].isdigit() else chinese_to_number(match[0])
@@ -142,16 +142,19 @@ def confirm_order(user_id):
         return {"message": "購物車是空的，無法確認訂單。"}
 
     try:
-        # Google 憑證驗證
+        # 驗證 Google 憑證
         google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
+        if not google_credentials_json:
+            return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
+        
         credentials_dict = json.loads(google_credentials_json)
         gc = gspread.service_account_from_dict(credentials_dict)
 
-        # 打開 Google Sheets 並選擇工作表
-        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/...')
-        worksheet = sh.get_worksheet(0)
+        # 開啟 Google Sheets 並選擇工作表
+        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
+        worksheet = sh.get_worksheet(1)
 
-        # 整理訂單內容
+        # 整理訂單資料
         cart_summary = {}
         for item in cart:
             if item['品項'] in cart_summary:
@@ -159,17 +162,18 @@ def confirm_order(user_id):
             else:
                 cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
 
-        cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
-        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        table_number = user_carts[user_id].get('table_number', '未提供')  # 取得桌號
+        order_df = pd.DataFrame([
+            {'品項': item_name, '價格': details['價格'], '數量': details['數量']}
+            for item_name, details in cart_summary.items()
+        ])
 
-        # 準備訂單資料
-        order_data = [
-            [timestamp, table_number, "", "", "Line Pay", cart_items_str, sum(item['價格'] for item in cart), ""]
-        ]
+        order_df['總價'] = order_df['價格'] * order_df['數量']
+        order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
 
-        # 將訂單資料寫入 Google Sheets
-        worksheet.append_rows(order_data)
+        # 將資料寫入工作表
+        data = [order_df.columns.values.tolist()] + order_df.values.tolist()
+        worksheet.insert_rows(data, 1)
 
         # 清空購物車
         user_carts[user_id] = []
@@ -178,7 +182,6 @@ def confirm_order(user_id):
     except Exception as e:
         print(f"Error in confirm_order: {e}")
         return {"message": "上傳訂單失敗，請稍後再試。"}
-
 
 
 # LINE Bot Webhook 路由
@@ -194,7 +197,7 @@ def callback():
     
     return 'OK'
 
-#  LINE Bot 處理訊息事件
+# LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
@@ -230,24 +233,6 @@ def handle_message(event):
         else:
             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
             response_text += f"\n{add_to_cart_response['message']}"
-
-    # 如果用戶正在輸入桌號
-    if user_states.get(user_id) == "entering_table_number":
-        user_carts[user_id]['table_number'] = user_message  # 存入桌號
-        user_states[user_id] = None  # 清除狀態
-        reply_text = f"已設定桌號為：{user_message}。請再次確認訂單或繼續購物。"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return
-
-    # 正常對話流程
-    if '確認訂單' in user_message:
-        user_states[user_id] = "entering_table_number"  # 更新狀態
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="請輸入您的桌號：")
-        )
-        return
-        
         
     # 查看購物車功能
     if '查看購物車' in user_message:
@@ -259,12 +244,18 @@ def handle_message(event):
         payment_url = f"{request.url_root}payment/{user_id}"
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
 
+    
+    # # 確認訂單功能
+    # if '確認訂單' in user_message  in user_message:
+    #     order_confirmation = confirm_order(user_id)
+    #     response_text += f"\n{order_confirmation['message']}"
+
+
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
-
 
 if __name__ == '__main__':
     app.run(debug=True)
