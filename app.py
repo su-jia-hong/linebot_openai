@@ -194,18 +194,133 @@ def callback():
     
     return 'OK'
 
+#  LINE Bot 處理訊息事件
+# @handler.add(MessageEvent, message=TextMessage)
+# def handle_message(event):
+#     user_message = event.message.text.strip()
+#     # 將 DataFrame 轉換為字串
+#     info_str = data.to_string(index=False)
+#     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
+    
+#     # 使用 OpenAI 生成回應
+#     response = openai.ChatCompletion.create(
+#         model="gpt-3.5-turbo",
+#         messages=[
+#             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
+#             {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
+#             {"role": "system", "content": "當客人點的餐有兩個以上的品項時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？另外再加一片巧克力厚片，價格是40元。請問還有其他需要幫忙的嗎？' "},
+#             {"role": "system", "content": "當客人說到刪除或移除字眼時，請務必回復刪除多少數量加品項，例如：'好的，已刪除一杯美式' "},
+#             # {"role": "system", "content": "請依據提供的檔案進行回答，若無法回答直接回覆'抱歉 ! 我無法回復這個問題，請按選單右下角聯絡客服'"}
+#             {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
+#             {"role": "system", "content": "answer the question considering the following data: " + info_str},
+#             {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
+#             {"role": "system", "content": "當使用者傳送'使用教學'這兩個字時，請回復'好的以上是我們的使用教學'"},
+#             {"role": "user", "content": user_message}
+#         ]
+#     )
+    
+#     response_text = response.choices[0].message.content
+    
+#     # 提取並處理購物車品項
+#     items = extract_item_name(response_text)
+#     for item_name, quantity in items:
+#         if '刪除' in user_message or '移除' in user_message:
+#             remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
+#             response_text += f"\n{remove_from_cart_response['message']}"
+#         else:
+#             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
+#             response_text += f"\n{add_to_cart_response['message']}"
+
+#     # 如果用戶正在輸入桌號
+#     if user_states.get(user_id) == "entering_table_number":
+#         user_carts[user_id]['table_number'] = user_message  # 存入桌號
+#         user_states[user_id] = None  # 清除狀態
+#         reply_text = f"已設定桌號為：{user_message}。請再次確認訂單或繼續購物。"
+#         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+#         return
+
+#     # 正常對話流程
+#     if '確認訂單' in user_message:
+#         user_states[user_id] = "entering_table_number"  # 更新狀態
+#         line_bot_api.reply_message(
+#             event.reply_token,
+#             TextSendMessage(text="請輸入您的桌號：")
+#         )
+#         return
+        
+        
+#     # 查看購物車功能
+#     if '查看購物車' in user_message:
+#         cart_display = display_cart(user_id)
+#         response_text += f"\n{cart_display}"
+
+#     if '付款'  in user_message or '確認訂單' in user_message:
+#         # 引導至付款頁面，附帶 user_id
+#         payment_url = f"{request.url_root}payment/{user_id}"
+#         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+
+
+
+
+#     # 回應 LINE Bot 用戶
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         TextSendMessage(text=response_text)
+#     )
 # LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
-    # 將 DataFrame 轉換為字串
-    info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
-    
-    # 使用 OpenAI 生成回應
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
+
+    # 初始化使用者資料（若未存在）
+    if user_id not in user_carts:
+        user_carts[user_id] = {'items': [], 'table_number': None}
+    if user_id not in user_states:
+        user_states[user_id] = None
+
+    try:
+        # 若正在輸入桌號，直接存入桌號並結束流程
+        if user_states[user_id] == "entering_table_number":
+            user_carts[user_id]['table_number'] = user_message  # 存入桌號
+            user_states[user_id] = None  # 清除狀態
+            reply_text = f"已設定桌號為：{user_message}。請再次確認訂單或繼續購物。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+            return  # 中止其他邏輯
+
+        # 確認訂單 -> 進入桌號輸入流程
+        if '確認訂單' in user_message:
+            user_states[user_id] = "entering_table_number"  # 設定狀態
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請輸入您的桌號：")
+            )
+            return  # 中止其他邏輯
+
+        # 查看購物車
+        if '查看購物車' in user_message:
+            cart_display = display_cart(user_id)
+            response_text = f"您的購物車內容：\n{cart_display}"
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=response_text)
+            )
+            return  # 中止其他邏輯
+
+        # 付款流程
+        if '付款' in user_message:
+            payment_url = f"{request.url_root}payment/{user_id}"
+            response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=response_text)
+            )
+            return  # 中止其他邏輯
+
+        # 使用 OpenAI API 生成回應
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
             {"role": "system", "content": "你是一個線上咖啡廳點餐助手"},
             {"role": "system", "content": "當客人點的餐包含咖啡、茶或歐蕾時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？' 或 '好的，您要一杯芙香蘋果茶，價格為90元。請問還有其他需要幫忙的嗎？'"},
             {"role": "system", "content": "當客人點的餐有兩個以上的品項時，請務必回復品項和數量並詢問是要冰的還是熱的，例如：'好的，你點的是一杯美式，價格是50元，請問您需要冰的還是熱的？另外再加一片巧克力厚片，價格是40元。請問還有其他需要幫忙的嗎？' "},
@@ -216,61 +331,33 @@ def handle_message(event):
             {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
             {"role": "system", "content": "當使用者傳送'使用教學'這兩個字時，請回復'好的以上是我們的使用教學'"},
             {"role": "user", "content": user_message}
-        ]
-    )
-    
-    response_text = response.choices[0].message.content
-    
-    # 提取並處理購物車品項
-    items = extract_item_name(response_text)
-    for item_name, quantity in items:
-        if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
-            response_text += f"\n{remove_from_cart_response['message']}"
-        else:
-            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-            response_text += f"\n{add_to_cart_response['message']}"
+            ]
+        )
+        response_text = response.choices[0].message.content
 
-    # 如果用戶正在輸入桌號
-    if user_states.get(user_id) == "entering_table_number":
-        user_carts[user_id]['table_number'] = user_message  # 存入桌號
-        user_states[user_id] = None  # 清除狀態
-        reply_text = f"已設定桌號為：{user_message}。請再次確認訂單或繼續購物。"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-        return
+        # 提取並處理購物車品項
+        items = extract_item_name(response_text)
+        for item_name, quantity in items:
+            if '刪除' in user_message or '移除' in user_message:
+                remove_response = remove_from_cart(user_id, item_name, quantity)
+                response_text += f"\n{remove_response['message']}"
+            else:
+                add_response = add_item_to_cart(user_id, item_name, quantity)
+                response_text += f"\n{add_response['message']}"
 
-    # 正常對話流程
-    if '確認訂單' in user_message:
-        user_states[user_id] = "entering_table_number"  # 更新狀態
+        # 回應使用者
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="請輸入您的桌號：")
+            TextSendMessage(text=response_text)
         )
-        return
-        
-        
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
 
-    if '付款'  in user_message or '確認訂單' in user_message:
-        # 引導至付款頁面，附帶 user_id
-        payment_url = f"{request.url_root}payment/{user_id}"
-        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
-
-    
-    # # 確認訂單功能
-    # if '確認訂單' in user_message  in user_message:
-    #     order_confirmation = confirm_order(user_id)
-    #     response_text += f"\n{order_confirmation['message']}"
-
-
-    # 回應 LINE Bot 用戶
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
+    except Exception as e:
+        # 若發生錯誤，回應使用者並記錄錯誤
+        print(f"Error: {e}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="發生錯誤，請再試一次。")
+        )
 
 if __name__ == '__main__':
     app.run(debug=True)
