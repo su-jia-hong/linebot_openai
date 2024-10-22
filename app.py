@@ -259,23 +259,12 @@ def handle_message(event):
         payment_url = f"{request.url_root}payment/{user_id}"
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
 
-
-
-
     # 回應 LINE Bot 用戶
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=response_text)
     )
 
-
-    except Exception as e:
-        # 若發生錯誤，回應使用者並記錄錯誤
-        print(f"Error: {e}")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="發生錯誤，請再試一次。")
-        )
 
 if __name__ == '__main__':
     app.run(debug=True)
