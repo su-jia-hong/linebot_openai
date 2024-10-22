@@ -26,8 +26,9 @@ except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
 
-# 初始化全局購物車字典
+# 初始化全局購物車字典、桌號
 user_carts = {}
+user_states = {}
 
 # 將中文數字轉換為阿拉伯數字
 def chinese_to_number(chinese):
@@ -141,19 +142,16 @@ def confirm_order(user_id):
         return {"message": "購物車是空的，無法確認訂單。"}
 
     try:
-        # 驗證 Google 憑證
+        # Google 憑證驗證
         google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
-        if not google_credentials_json:
-            return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
-        
         credentials_dict = json.loads(google_credentials_json)
         gc = gspread.service_account_from_dict(credentials_dict)
 
-        # 開啟 Google Sheets 並選擇工作表
-        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
+        # 打開 Google Sheets 並選擇工作表
+        sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/...')
         worksheet = sh.get_worksheet(0)
 
-        # 整理訂單資料
+        # 整理訂單內容
         cart_summary = {}
         for item in cart:
             if item['品項'] in cart_summary:
@@ -161,24 +159,16 @@ def confirm_order(user_id):
             else:
                 cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
 
-        # 整理餐點內容為字符串
         cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
+        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        table_number = user_carts[user_id].get('table_number', '未提供')  # 取得桌號
 
-        # 訂單的額外資訊
-        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')  # 訂單時間
-        table_number = ""  # 桌號
-        name = ""  # 姓名
-        phone = ""  # 電話
-        payment_method = "Line Pay"  # 付款方式
-        total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())  # 計算總價
-        note = ""  # 備註
-
-        # 按照指定格式準備資料
+        # 準備訂單資料
         order_data = [
-            [timestamp, table_number, name, phone, payment_method, cart_items_str, total_price, note]
+            [timestamp, table_number, "", "", "Line Pay", cart_items_str, sum(item['價格'] for item in cart), ""]
         ]
 
-        # 將訂單資料追加到表格的末尾
+        # 將訂單資料寫入 Google Sheets
         worksheet.append_rows(order_data)
 
         # 清空購物車
@@ -188,6 +178,7 @@ def confirm_order(user_id):
     except Exception as e:
         print(f"Error in confirm_order: {e}")
         return {"message": "上傳訂單失敗，請稍後再試。"}
+
 
 
 # LINE Bot Webhook 路由
@@ -239,6 +230,24 @@ def handle_message(event):
         else:
             add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
             response_text += f"\n{add_to_cart_response['message']}"
+
+    # 如果用戶正在輸入桌號
+    if user_states.get(user_id) == "entering_table_number":
+        user_carts[user_id]['table_number'] = user_message  # 存入桌號
+        user_states[user_id] = None  # 清除狀態
+        reply_text = f"已設定桌號為：{user_message}。請再次確認訂單或繼續購物。"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        return
+
+    # 正常對話流程
+    if '確認訂單' in user_message:
+        user_states[user_id] = "entering_table_number"  # 更新狀態
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請輸入您的桌號：")
+        )
+        return
+        
         
     # 查看購物車功能
     if '查看購物車' in user_message:
