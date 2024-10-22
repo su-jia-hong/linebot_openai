@@ -159,7 +159,7 @@ def confirm_order(user_id, table_number=""):
 
         # 開啟 Google Sheets 並選擇工作表
         sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
-        worksheet = sh.get_worksheet(0)
+        worksheet = sh.get_worksheet(1)
 
         # 整理訂單資料
         cart_summary = {}
