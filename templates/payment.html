@@ -39,28 +39,35 @@
             color: #28a745;
             margin-bottom: 20px;
         }
-        .confirm-button {
-            background-color: #007bff;
+        input {
+            width: 80%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #28a745;
             color: white;
             border: none;
             padding: 10px 20px;
-            font-size: 18px;
             border-radius: 5px;
             cursor: pointer;
         }
-        .confirm-button:hover {
-            background-color: #0056b3;
+        button:hover {
+            background-color: #218838;
         }
     </style>
 </head>
 <body>
-        <div class="payment-container">
-        <img src="{{ order.productImageUrl }}" alt="Product Image" class="product-image">
-        <div class="product-name">{{ order.productName }}</div>
-        <div class="product-amount">總金額: {{ order.amount }} {{ order.currency }}</div>
-    
+    <div class="payment-container">
+        <img class="product-image" src="{{ order['productImageUrl'] }}" alt="Product Image">
+        <div class="product-name">{{ order['productName'] }}</div>
+        <div class="product-amount">總金額：{{ order['amount'] }} 元</div>
+
         <form method="POST">
-            <button type="submit" class="confirm-button">確認付款</button>
+            <input type="text" name="table_number" placeholder="請輸入桌號" required>
+            <button type="submit">確認付款</button>
         </form>
     </div>
 </body>
