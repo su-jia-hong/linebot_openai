@@ -89,25 +89,31 @@ def display_cart(user_id):
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
     try:
-        # 取得使用者購物車資料
         cart = user_carts.get(user_id, [])
         total_amount = sum(item['價格'] for item in cart)
 
-        # 模擬付款頁面資料
+        if request.method == 'POST':
+            # 接收桌號資料
+            table_number = request.form.get('table_number')
+            
+            # 確認訂單並推送到 Google Sheets
+            order_confirmation = confirm_order(user_id, table_number)
+
+            if order_confirmation["message"].startswith("訂單已確認"):
+                return f"<h1>付款成功！總金額為 {total_amount} 元</h1><p>{order_confirmation['message']}</p>"
+            else:
+                return f"<h1>付款失敗</h1><p>{order_confirmation['message']}</p>"
+
+        # 生成訂單資料並渲染付款頁面
         order = {
             "amount": total_amount,
             "productName": "購物車內商品",
             "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
             "confirmUrl": f"{request.url_root}payment_success/{user_id}?total={total_amount}",
-            "orderId": datetime.now().strftime('%m%d%H%M%S'),  # 動態訂單編號
+            "orderId": datetime.now().strftime('%m%d%H%M%S'),
             "currency": "TWD"
         }
 
-        if request.method == 'POST':
-            # 模擬付款成功後跳轉到 payment_success 頁面
-            return redirect(order["confirmUrl"])
-
-        # 將訂單資料傳遞給模板
         return render_template('payment.html', order=order)
 
     except Exception as e:
@@ -136,21 +142,18 @@ def payment_success(user_id):
 
 
 # 確認訂單並更新到 Google Sheets
-def confirm_order(user_id):
+def confirm_order(user_id, table_number):
     cart = user_carts.get(user_id, [])
     if not cart:
         return {"message": "購物車是空的，無法確認訂單。"}
 
     try:
-        # 驗證 Google 憑證
         google_credentials_json = os.getenv('GOOGLE_CREDENTIALS')
         if not google_credentials_json:
             return {"message": "無法找到 Google 憑證，請聯繫管理員。"}
-        
+
         credentials_dict = json.loads(google_credentials_json)
         gc = gspread.service_account_from_dict(credentials_dict)
-
-        # 開啟 Google Sheets 並選擇工作表
         sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1YPzvvQrQurqlZw2joMaDvDse-tCY9YX-7B2fzpc9qYY/edit?usp=sharing')
         worksheet = sh.get_worksheet(1)
 
@@ -170,8 +173,9 @@ def confirm_order(user_id):
         order_df['總價'] = order_df['價格'] * order_df['數量']
         order_df['訂單時間'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         order_df['訂單編號'] = datetime.now().strftime('%m%d%H%M')
+        order_df['桌號'] = table_number  # 加入桌號
 
-        # 將資料寫入工作表
+        # 寫入資料到 Google Sheets
         data = [order_df.columns.values.tolist()] + order_df.values.tolist()
         worksheet.insert_rows(data, 1)
 
@@ -182,6 +186,7 @@ def confirm_order(user_id):
     except Exception as e:
         print(f"Error in confirm_order: {e}")
         return {"message": "上傳訂單失敗，請稍後再試。"}
+
 
 
 # LINE Bot Webhook 路由
