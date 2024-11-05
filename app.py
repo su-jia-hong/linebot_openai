@@ -251,28 +251,33 @@ def handle_message(event):
                 TextSendMessage(text="無法識別要刪除的品項。請使用 '刪除 [品項名稱] [數量]' 格式。")
             )
         
-    # 查看購物車功能
-    if '查看購物車' in user_message:
-        cart_display = display_cart(user_id)
-        response_text += f"\n{cart_display}"
-
-    if '付款'  in user_message or '確認訂單' in user_message:
-        # 引導至付款頁面，附帶 user_id
-        payment_url = f"{request.url_root}payment/{user_id}"
-        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
-
-    
-    # # 確認訂單功能
-    # if '確認訂單' in user_message  in user_message:
-    #     order_confirmation = confirm_order(user_id)
-    #     response_text += f"\n{order_confirmation['message']}"
-
-
-    # 回應 LINE Bot 用戶
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=response_text)
-    )
+    elif '購物車' in user_message:
+        cart_content = display_cart(user_id)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=cart_content)
+        )
+    elif '確認訂單' in user_message:
+        order_confirmation = confirm_order(user_id)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=order_confirmation["message"])
+        )
+    else:
+        # 提取品項名稱和數量
+        items = extract_item_name(ai_response)
+        if items:
+            for item_name, quantity in items:
+                result = add_item_to_cart(user_id, item_name, quantity)
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=result["message"])
+                )
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=ai_response)
+            )
 
 if __name__ == '__main__':
     app.run(debug=True)
