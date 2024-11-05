@@ -198,6 +198,7 @@ def confirm_order(user_id, table_number=""):
 
         # 訂單的額外資訊
         timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')  # 訂單時間
+        name = ""
         payment_method = "Line Pay"  # 付款方式 (或根據用戶選擇修改)
         total_price = sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())  # 計算總價
         note = ""  # 備註 (根據具體需要填寫)
