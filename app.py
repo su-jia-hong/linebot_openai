@@ -236,13 +236,20 @@ def handle_message(event):
     
     # 提取並處理購物車品項
     items = extract_item_name(response_text)
-    for item_name, quantity in items:
-        if '刪除' in user_message or '移除' in user_message:
-            remove_from_cart_response = remove_from_cart(user_id, item_name, quantity)
-            response_text += f"\n{remove_from_cart_response['message']}"
+    if '刪除' in user_message:
+        items_to_remove = extract_item_name(user_message)
+        if items_to_remove:
+            for item_name, quantity in items_to_remove:
+                result = remove_from_cart(user_id, item_name, quantity)
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=result["message"])
+                )
         else:
-            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
-            response_text += f"\n{add_to_cart_response['message']}"
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="無法識別要刪除的品項。請使用 '刪除 [品項名稱] [數量]' 格式。")
+            )
         
     # 查看購物車功能
     if '查看購物車' in user_message:
