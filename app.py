@@ -86,6 +86,28 @@ def display_cart(user_id):
     
     return display_str
 
+# 移除購物車中的品項
+def remove_from_cart(user_id, item_name, quantity=1):
+    cart = user_carts.get(user_id, [])
+    item_count = sum(1 for item in cart if item['品項'] == item_name)
+    
+    if item_count == 0:
+        return {"message": f"購物車中沒有找到 {item_name}。"}
+    
+    remove_count = min(quantity, item_count)
+    new_cart = []
+    removed_items = 0
+    
+    for item in cart:
+        if item['品項'] == item_name and removed_items < remove_count:
+            removed_items += 1
+        else:
+            new_cart.append(item)
+    
+    user_carts[user_id] = new_cart
+    return {"message": f"已從購物車中移除 {removed_items} 個 {item_name}。"}
+    
+
 # 虛擬付款頁面
 @app.route("/payment/<user_id>", methods=['GET', 'POST'])
 def payment(user_id):
@@ -120,6 +142,8 @@ def payment(user_id):
     except Exception as e:
         print(f"Error in payment route: {e}")
         return render_template('error.html', message="發生錯誤，請稍後再試。")
+
+
 
 
 # 付款成功頁面並上傳訂單至 Google Sheets
@@ -236,48 +260,44 @@ def handle_message(event):
     
     # 提取並處理購物車品項
     items = extract_item_name(response_text)
-    if '刪除' in user_message:
-        items_to_remove = extract_item_name(user_message)
-        if items_to_remove:
-            for item_name, quantity in items_to_remove:
-                result = remove_from_cart(user_id, item_name, quantity)
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=result["message"])
-                )
-        else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="無法識別要刪除的品項。請使用 '刪除 [品項名稱] [數量]' 格式。")
-            )
+    for item_name, quantity in items:
         
-    elif '購物車' in user_message:
-        cart_content = display_cart(user_id)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=cart_content)
-        )
-    elif '確認訂單' in user_message:
-        order_confirmation = confirm_order(user_id)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=order_confirmation["message"])
-        )
-    else:
-        # 提取品項名稱和數量
-        items = extract_item_name(ai_response)
-        if items:
-            for item_name, quantity in items:
-                result = add_item_to_cart(user_id, item_name, quantity)
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=result["message"])
-                )
+        if '刪除' in user_message or '移除' in user_message:
+            items_to_remove = extract_item_name(user_message)
+            if items_to_remove:
+                for item_name, quantity in items_to_remove:
+                    result = remove_from_cart(user_id, item_name, quantity)
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=result["message"])
+                    )
         else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=ai_response)
-            )
+            add_to_cart_response = add_item_to_cart(user_id, item_name, quantity)
+            response_text += f"\n{add_to_cart_response['message']}"
+        
+    # 查看購物車功能
+    if '查看購物車' in user_message:
+        cart_display = display_cart(user_id)
+        response_text += f"\n{cart_display}"
+
+    if '付款'  in user_message or '確認訂單' in user_message:
+        # 引導至付款頁面，附帶 user_id
+        payment_url = f"{request.url_root}payment/{user_id}"
+        response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+
+    
+    # # 確認訂單功能
+    # if '確認訂單' in user_message  in user_message:
+    #     order_confirmation = confirm_order(user_id)
+    #     response_text += f"\n{order_confirmation['message']}"
+
+
+    # 回應 LINE Bot 用戶
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=response_text)
+    )
+
 
 if __name__ == '__main__':
     app.run(debug=True)
