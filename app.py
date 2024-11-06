@@ -130,7 +130,7 @@ def payment(user_id):
         # 生成訂單資料並渲染付款頁面
         order = {
             "amount": total_amount,
-            "productName": "購物車內商品",
+            "productName": "購物車",
             "productImageUrl": "https://raw.githubusercontent.com/hong91511/images/main/S__80822274.jpg",
             "confirmUrl": f"{request.url_root}payment_success/{user_id}?total={total_amount}",
             "orderId": datetime.now().strftime('%m%d%H%M%S'),
