@@ -1,6 +1,7 @@
 import os
 import json
 import gspread
+import pytz
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -27,7 +28,8 @@ try:
 except Exception as e:
     print(f"Failed to load CSV: {e}")
     exit()
-
+    
+taiwan_tz = pytz.timezone('Asia/Taipei')
 
 # 初始化全局購物車字典
 user_carts = {}
@@ -197,7 +199,7 @@ def confirm_order(user_id, table_number=""):
         cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
 
         # 訂單的額外資訊
-        timestamp = datetime.now().strftime('%Y/%m/%d %H:%M:%S')  # 訂單時間
+        timestamp = datetime.now(taiwan_tz).strftime('%Y/%m/%d %H:%M:%S')  # 訂單時間
         name = ""
         phone = ""
         payment_method = "Line Pay"  # 付款方式 (或根據用戶選擇修改)
