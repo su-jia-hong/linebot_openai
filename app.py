@@ -256,6 +256,7 @@ def handle_message(event):
             {"role": "system", "content": "當客人說查看購物車時，請回復 '好的' "},
             {"role": "system", "content": "answer the question considering the following data: " + info_str},
             {"role": "system", "content": "當使用者傳送'菜單'這兩個字時，請回復'您好，這是我們菜單有需要協助的請告訴我'"},
+            {"role": "system", "content": "當客人詢問營業時間，請回覆營業時間為，例如：'平日是 13:00 ~ 16:00 假日是 10:00 ~ 16:00'"},
             {"role": "system", "content": "當使用者傳送'使用教學'這兩個字時，請回復'好的以上是我們的使用教學'"},
             {"role": "user", "content": user_message}
         ]
