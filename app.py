@@ -7,6 +7,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ImageComponent
+from linebot.models import ButtonsTemplate, TemplateSendMessage, PostbackAction, MessageAction, URIAction
 import openai
 import pandas as pd
 import re
