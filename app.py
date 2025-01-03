@@ -237,6 +237,16 @@ def callback():
     
     return 'OK'
 
+        
+
+# LINE Bot 處理訊息事件
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text.strip()
+    # 將 DataFrame 轉換為字串
+    info_str = data.to_string(index=False)
+    user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
+    
 def handle_message(event):
     message = text=event.message.text
     if re.match('推薦餐點',message):
@@ -266,15 +276,6 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, buttons_template_message)
     else:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
-        
-
-# LINE Bot 處理訊息事件
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_message = event.message.text.strip()
-    # 將 DataFrame 轉換為字串
-    info_str = data.to_string(index=False)
-    user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
     
     # 使用 OpenAI 生成回應
     response = openai.ChatCompletion.create(
