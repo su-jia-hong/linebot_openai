@@ -319,14 +319,14 @@ def handle_message(event):
                     ]
                 ),
                 CarouselColumn(
-                    thumbnail_image_url='https://imgur.com/a/Bkswnng.png',
-                    title='摩卡拿鐵',
+                    thumbnail_image_url='https://drive.google.com/uc?export=view&id=1zKRJz4UfT2-FFOdcFKC4wyEa2HotCRmC',
+                    title='蜂蜜氣泡飲',
                     text='價格為 70 元',
                     actions=[
                         PostbackAction(
-                            label='摩卡拿鐵',
-                            display_text='摩卡拿鐵',
-                            data='摩卡拿鐵'
+                            label='蜂蜜氣泡飲',
+                            display_text='蜂蜜氣泡飲',
+                            data='蜂蜜氣泡飲'
                         )
                     ]
                 )
