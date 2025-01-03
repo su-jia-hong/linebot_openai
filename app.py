@@ -319,7 +319,7 @@ def handle_message(event):
                     ]
                 ),
                 CarouselColumn(
-                    thumbnail_image_url='https://imgur.com/a/Bkswnng.jpg',
+                    thumbnail_image_url='https://imgur.com/a/Bkswnng.png',
                     title='摩卡拿鐵',
                     text='價格為 70 元',
                     actions=[
