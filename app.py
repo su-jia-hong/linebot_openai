@@ -231,7 +231,7 @@ def confirm_order(user_id, table_number=""):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     message = text=event.message.text
-    if re.match('告訴我秘密',message):
+    if message = '告訴我秘密'
         buttons_template_message = TemplateSendMessage(
         alt_text='這是樣板傳送訊息',
         template=ButtonsTemplate(
