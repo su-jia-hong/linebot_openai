@@ -230,51 +230,34 @@ def confirm_order(user_id, table_number=""):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_message = event.message.text.strip()
-    
-    if user_message == "推薦":
-        # FlexMessage - 菜單
-        flex_message = FlexSendMessage(
-            alt_text="這是 FlexMessage 範例",
-            contents={
-                "type": "bubble",
-                "hero": {
-                    "type": "image",
-                    "url": "https://i.imgur.com/kNBl363.jpg",  # 確保這個 URL 可用
-                    "size": "full",
-                    "aspectRatio": "20:13",
-                    "aspectMode": "cover"
-                },
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": "菜單範例", "weight": "bold", "size": "xl"},
-                        {"type": "text", "text": "描述文字：選擇您需要的項目", "size": "sm", "color": "#888888"}
-                    ]
-                },
-                "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "style": "link",
-                            "action": {
-                                "type": "uri",
-                                "label": "查看更多",
-                                "uri": "https://example.com"
-                            }
-                        }
-                    ]
-                }
-            }
+    message = text=event.message.text
+    if re.match('告訴我秘密',message):
+        buttons_template_message = TemplateSendMessage(
+        alt_text='這是樣板傳送訊息',
+        template=ButtonsTemplate(
+            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
+            title='中華民國',
+            text='選單功能－TemplateSendMessage',
+            actions=[
+                PostbackAction(
+                    label='這是PostbackAction',
+                    display_text='顯示文字',
+                    data='實際資料'
+                ),
+                MessageAction(
+                    label='這是MessageAction',
+                    text='實際資料'
+                ),
+                URIAction(
+                    label='這是URIAction',
+                    uri='https://en.wikipedia.org/wiki/Taiwan'
+                )
+            ]
         )
-        line_bot_api.reply_message(event.reply_token, flex_message)
+    )
+        line_bot_api.reply_message(event.reply_token, buttons_template_message)
     else:
-        # 回覆一般文字訊息
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="無法識別的指令"))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
