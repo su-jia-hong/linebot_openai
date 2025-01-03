@@ -300,29 +300,35 @@ def handle_message(event):
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
 
 
-    if '推薦餐點' in user_message:
- 
-        template=ButtonsTemplate(
-            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
-            title='中華民國',
-            text='選單功能－TemplateSendMessage',
+    if '推薦餐點' in user_message: 
+        template = ButtonsTemplate(
+            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',  # 縮圖 URL
+            title='中華民國',  # 按鈕模板標題
+            text='選單功能－TemplateSendMessage',  # 按鈕模板文字描述
             actions=[
                 PostbackAction(
                     label='這是PostbackAction',
-                    display_text='顯示文字',
-                    data='實際資料'
+                    display_text='顯示文字',  # 回應使用者的顯示文字
+                    data='實際資料'  # 回傳到伺服器的資料
                 ),
                 MessageAction(
                     label='這是MessageAction',
-                    text='實際資料'
+                    text='實際資料'  # 發送給 LINE 的文字
                 ),
                 URIAction(
                     label='這是URIAction',
-                    uri='https://en.wikipedia.org/wiki/Taiwan'
+                    uri='https://en.wikipedia.org/wiki/Taiwan'  # 網址連結
                 )
             ]
         )
     
+        # 將 TemplateSendMessage 傳送給用戶
+        template_message = TemplateSendMessage(
+            alt_text='這是按鈕樣板訊息',  # 當裝置不支援圖文消息時的替代文字
+            template=template
+        )
+        
+        line_bot_api.reply_message(event.reply_token, template_message)
 
 
     
