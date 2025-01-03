@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ImageComponent
 import openai
 import pandas as pd
 import re
@@ -169,6 +170,7 @@ def payment_success(user_id):
 
 
 
+
 # 確認訂單並更新到 Google Sheets
 def confirm_order(user_id, table_number=""):
     cart = user_carts.get(user_id, [])
@@ -224,6 +226,81 @@ def confirm_order(user_id, table_number=""):
         return {"message": "上傳訂單失敗，請稍後再試。"}
 
 
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_message = event.message.text.strip()
+    user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
+
+    # 當用戶傳送「菜單」時回傳圖文訊息
+    if user_message == "菜單":
+        # FlexMessage 內容
+        flex_message = FlexSendMessage(
+            alt_text="菜單",
+            contents={
+                "type": "carousel",
+                "contents": [
+                    {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": "https://example.com/menu_item1.jpg",
+                            "size": "full",
+                            "aspect_ratio": "20:13",
+                            "aspect_mode": "cover",
+                            "action": {"type": "postback", "data": "item1"}
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "美式咖啡", "weight": "bold", "size": "lg"},
+                                {
+                                    "type": "box",
+                                    "layout": "baseline",
+                                    "contents": [
+                                        {"type": "text", "text": "$50", "weight": "bold", "size": "xl", "flex": 0}
+                                    ]
+                                },
+                                {"type": "text", "text": "經典風味，香醇回甘", "size": "sm", "color": "#999999"}
+                            ]
+                        }
+                    },
+                    {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": "https://example.com/menu_item2.jpg",
+                            "size": "full",
+                            "aspect_ratio": "20:13",
+                            "aspect_mode": "cover",
+                            "action": {"type": "postback", "data": "item2"}
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "拿鐵", "weight": "bold", "size": "lg"},
+                                {
+                                    "type": "box",
+                                    "layout": "baseline",
+                                    "contents": [
+                                        {"type": "text", "text": "$70", "weight": "bold", "size": "xl", "flex": 0}
+                                    ]
+                                },
+                                {"type": "text", "text": "濃郁香醇，回味無窮", "size": "sm", "color": "#999999"}
+                            ]
+                        }
+                    }
+                ]
+            }
+        )
+        line_bot_api.reply_message(event.reply_token, flex_message)
+        return
+
+    # 其他處理邏輯
+    response_text = "請輸入正確的指令"
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=response_text))
+
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -246,36 +323,6 @@ def handle_message(event):
     # 將 DataFrame 轉換為字串
     info_str = data.to_string(index=False)
     user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
-    
-def handle_message(event):
-    message = text=event.message.text
-    if re.match('推薦餐點',message):
-        buttons_template_message = TemplateSendMessage(
-        alt_text='這是樣板傳送訊息',
-        template=ButtonsTemplate(
-            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
-            title='中華民國',
-            text='選單功能－TemplateSendMessage',
-            actions=[
-                PostbackAction(
-                    label='這是PostbackAction',
-                    display_text='顯示文字',
-                    data='實際資料'
-                ),
-                MessageAction(
-                    label='這是MessageAction',
-                    text='實際資料'
-                ),
-                URIAction(
-                    label='這是URIAction',
-                    uri='https://en.wikipedia.org/wiki/Taiwan'
-                )
-            ]
-        )
-    )
-        line_bot_api.reply_message(event.reply_token, buttons_template_message)
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
     
     # 使用 OpenAI 生成回應
     response = openai.ChatCompletion.create(
