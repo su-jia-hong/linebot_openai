@@ -307,42 +307,26 @@ def handle_message(event):
         carousel_template = CarouselTemplate(
             columns=[
                 CarouselColumn(
-                    thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
-                    title='卡片 1：推薦餐點',
-                    text='這是第一張卡片的內容',
+                    thumbnail_image_url='https://imgur.com/0i5Cqs9.jpg',
+                    title='巧克力厚片',
+                    text='價格為 40 元',
                     actions=[
                         PostbackAction(
-                            label='這是PostbackAction',
-                            display_text='卡片 1 回應文字',
-                            data='卡片1_實際資料'
-                        ),
-                        MessageAction(
-                            label='這是MessageAction',
-                            text='卡片1_回應資料'
-                        ),
-                        URIAction(
-                            label='這是URIAction',
-                            uri='https://en.wikipedia.org/wiki/Taiwan'
+                            label='巧克力厚片',
+                            display_text='巧克力厚片',
+                            data='巧克力厚片'
                         )
                     ]
                 ),
                 CarouselColumn(
-                    thumbnail_image_url='https://i.imgur.com/2Rh2dVl.jpg',
-                    title='卡片 2：推薦飲品',
-                    text='這是第二張卡片的內容',
+                    thumbnail_image_url='https://imgur.com/a/Bkswnng.jpg',
+                    title='摩卡拿鐵',
+                    text='價格為 70 元',
                     actions=[
                         PostbackAction(
-                            label='這是PostbackAction',
-                            display_text='卡片 2 回應文字',
-                            data='卡片2_實際資料'
-                        ),
-                        MessageAction(
-                            label='這是MessageAction',
-                            text='卡片2_回應資料'
-                        ),
-                        URIAction(
-                            label='這是URIAction',
-                            uri='https://en.wikipedia.org/wiki/Coffee'
+                            label='摩卡拿鐵',
+                            display_text='摩卡拿鐵',
+                            data='摩卡拿鐵'
                         )
                     ]
                 )
@@ -351,7 +335,7 @@ def handle_message(event):
 
         # 封裝為 TemplateSendMessage
         template_message = TemplateSendMessage(
-            alt_text='這是旋轉木馬樣板訊息',
+            alt_text='推薦餐點',
             template=carousel_template
         )
 
