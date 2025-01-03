@@ -306,7 +306,7 @@ def handle_message(event):
         # 建立多卡片樣板
         carousel_template = CarouselTemplate(
             columns=[
-                CarouselColumn1(
+                CarouselColumn(
                     thumbnail_image_url='https://imgur.com/0i5Cqs9.jpg',
                     title='巧克力厚片',
                     text='價格為 40 元',
@@ -318,8 +318,8 @@ def handle_message(event):
                         )
                     ]
                 ),
-                CarouselColumn2(
-                    thumbnail_image_url='https://imgur.com/a/cghH1II.jpg',
+                CarouselColumn(
+                    thumbnail_image_url='https://imgur.com/a/37bCi2P.jpg',
                     title='蜂蜜氣泡飲',
                     text='價格為 70 元',
                     actions=[
