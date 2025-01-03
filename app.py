@@ -319,7 +319,7 @@ def handle_message(event):
                     ]
                 ),
                 CarouselColumn(
-                    thumbnail_image_url='https://imgur.com/a/37bCi2P.jpg',
+                    thumbnail_image_url='[img]https://upload.cc/i1/2025/01/04/uokLiD.jpg[/img]',
                     title='蜂蜜氣泡飲',
                     text='價格為 70 元',
                     actions=[
