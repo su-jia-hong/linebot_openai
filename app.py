@@ -228,36 +228,7 @@ def confirm_order(user_id, table_number=""):
 
 
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    message = text=event.message.text
-    if message = '告訴我秘密'
-        buttons_template_message = TemplateSendMessage(
-        alt_text='這是樣板傳送訊息',
-        template=ButtonsTemplate(
-            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
-            title='中華民國',
-            text='選單功能－TemplateSendMessage',
-            actions=[
-                PostbackAction(
-                    label='這是PostbackAction',
-                    display_text='顯示文字',
-                    data='實際資料'
-                ),
-                MessageAction(
-                    label='這是MessageAction',
-                    text='實際資料'
-                ),
-                URIAction(
-                    label='這是URIAction',
-                    uri='https://en.wikipedia.org/wiki/Taiwan'
-                )
-            ]
-        )
-    )
-        line_bot_api.reply_message(event.reply_token, buttons_template_message)
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
+
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
@@ -327,6 +298,35 @@ def handle_message(event):
         # 引導至付款頁面，附帶 user_id
         payment_url = f"{request.url_root}payment/{user_id}"
         response_text = f"請點擊以下連結進行付款：\n{payment_url}"
+
+
+    if '推薦餐點' in user_message:
+        buttons_template_message = TemplateSendMessage(
+        alt_text='這是樣板傳送訊息',
+        template=ButtonsTemplate(
+            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
+            title='中華民國',
+            text='選單功能－TemplateSendMessage',
+            actions=[
+                PostbackAction(
+                    label='這是PostbackAction',
+                    display_text='顯示文字',
+                    data='實際資料'
+                ),
+                MessageAction(
+                    label='這是MessageAction',
+                    text='實際資料'
+                ),
+                URIAction(
+                    label='這是URIAction',
+                    uri='https://en.wikipedia.org/wiki/Taiwan'
+                )
+            ]
+        )
+    )
+        line_bot_api.reply_message(event.reply_token, buttons_template_message)
+    else:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
 
     
     # # 確認訂單功能
