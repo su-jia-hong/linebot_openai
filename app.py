@@ -237,6 +237,37 @@ def callback():
     
     return 'OK'
 
+def handle_message(event):
+    message = text=event.message.text
+    if re.match('推薦餐點',message):
+        buttons_template_message = TemplateSendMessage(
+        alt_text='這是樣板傳送訊息',
+        template=ButtonsTemplate(
+            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
+            title='中華民國',
+            text='選單功能－TemplateSendMessage',
+            actions=[
+                PostbackAction(
+                    label='這是PostbackAction',
+                    display_text='顯示文字',
+                    data='實際資料'
+                ),
+                MessageAction(
+                    label='這是MessageAction',
+                    text='實際資料'
+                ),
+                URIAction(
+                    label='這是URIAction',
+                    uri='https://en.wikipedia.org/wiki/Taiwan'
+                )
+            ]
+        )
+    )
+        line_bot_api.reply_message(event.reply_token, buttons_template_message)
+    else:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(message))
+        
+
 # LINE Bot 處理訊息事件
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
