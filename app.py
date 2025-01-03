@@ -301,8 +301,7 @@ def handle_message(event):
 
 
     if '推薦餐點' in user_message:
-        buttons_template_message = TemplateSendMessage(
-        alt_text='這是樣板傳送訊息',
+ 
         template=ButtonsTemplate(
             thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
             title='中華民國',
@@ -323,7 +322,7 @@ def handle_message(event):
                 )
             ]
         )
-    )
+    
 
 
     
