@@ -226,80 +226,55 @@ def confirm_order(user_id, table_number=""):
         return {"message": "上傳訂單失敗，請稍後再試。"}
 
 
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_message = event.message.text.strip()
-    user_id = event.source.user_id  # 獲取 LINE 用戶的唯一 ID
-
-    # 當用戶傳送「菜單」時回傳圖文訊息
-    if user_message == "菜單":
-        # FlexMessage 內容
+    
+    if user_message == "推薦":
+        # FlexMessage - 菜單
         flex_message = FlexSendMessage(
-            alt_text="菜單",
+            alt_text="這是 FlexMessage 範例",
             contents={
-                "type": "carousel",
-                "contents": [
-                    {
-                        "type": "bubble",
-                        "hero": {
-                            "type": "image",
-                            "url": "https://example.com/menu_item1.jpg",
-                            "size": "full",
-                            "aspect_ratio": "20:13",
-                            "aspect_mode": "cover",
-                            "action": {"type": "postback", "data": "item1"}
-                        },
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "美式咖啡", "weight": "bold", "size": "lg"},
-                                {
-                                    "type": "box",
-                                    "layout": "baseline",
-                                    "contents": [
-                                        {"type": "text", "text": "$50", "weight": "bold", "size": "xl", "flex": 0}
-                                    ]
-                                },
-                                {"type": "text", "text": "經典風味，香醇回甘", "size": "sm", "color": "#999999"}
-                            ]
+                "type": "bubble",
+                "hero": {
+                    "type": "image",
+                    "url": "https://i.imgur.com/kNBl363.jpg",  # 確保這個 URL 可用
+                    "size": "full",
+                    "aspectRatio": "20:13",
+                    "aspectMode": "cover"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": "菜單範例", "weight": "bold", "size": "xl"},
+                        {"type": "text", "text": "描述文字：選擇您需要的項目", "size": "sm", "color": "#888888"}
+                    ]
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "link",
+                            "action": {
+                                "type": "uri",
+                                "label": "查看更多",
+                                "uri": "https://example.com"
+                            }
                         }
-                    },
-                    {
-                        "type": "bubble",
-                        "hero": {
-                            "type": "image",
-                            "url": "https://example.com/menu_item2.jpg",
-                            "size": "full",
-                            "aspect_ratio": "20:13",
-                            "aspect_mode": "cover",
-                            "action": {"type": "postback", "data": "item2"}
-                        },
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {"type": "text", "text": "拿鐵", "weight": "bold", "size": "lg"},
-                                {
-                                    "type": "box",
-                                    "layout": "baseline",
-                                    "contents": [
-                                        {"type": "text", "text": "$70", "weight": "bold", "size": "xl", "flex": 0}
-                                    ]
-                                },
-                                {"type": "text", "text": "濃郁香醇，回味無窮", "size": "sm", "color": "#999999"}
-                            ]
-                        }
-                    }
-                ]
+                    ]
+                }
             }
         )
         line_bot_api.reply_message(event.reply_token, flex_message)
-        return
-
-    # 其他處理邏輯
-    response_text = "請輸入正確的指令"
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=response_text))
+    else:
+        # 回覆一般文字訊息
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="無法識別的指令"))
 
 # LINE Bot Webhook 路由
 @app.route("/callback", methods=['POST'])
