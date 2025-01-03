@@ -302,33 +302,59 @@ def handle_message(event):
 
 
     if '推薦餐點' in user_message: 
-        template = ButtonsTemplate(
-            thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',  # 縮圖 URL
-            title='中華民國',  # 按鈕模板標題
-            text='選單功能－TemplateSendMessage',  # 按鈕模板文字描述
-            actions=[
-                PostbackAction(
-                    label='這是PostbackAction',
-                    display_text='顯示文字',  # 回應使用者的顯示文字
-                    data='實際資料'  # 回傳到伺服器的資料
+        # 建立多卡片樣板
+        carousel_template = CarouselTemplate(
+            columns=[
+                CarouselColumn(
+                    thumbnail_image_url='https://i.imgur.com/kNBl363.jpg',
+                    title='卡片 1：推薦餐點',
+                    text='這是第一張卡片的內容',
+                    actions=[
+                        PostbackAction(
+                            label='這是PostbackAction',
+                            display_text='卡片 1 回應文字',
+                            data='卡片1_實際資料'
+                        ),
+                        MessageAction(
+                            label='這是MessageAction',
+                            text='卡片1_回應資料'
+                        ),
+                        URIAction(
+                            label='這是URIAction',
+                            uri='https://en.wikipedia.org/wiki/Taiwan'
+                        )
+                    ]
                 ),
-                MessageAction(
-                    label='這是MessageAction',
-                    text='實際資料'  # 發送給 LINE 的文字
-                ),
-                URIAction(
-                    label='這是URIAction',
-                    uri='https://en.wikipedia.org/wiki/Taiwan'  # 網址連結
+                CarouselColumn(
+                    thumbnail_image_url='https://i.imgur.com/2Rh2dVl.jpg',
+                    title='卡片 2：推薦飲品',
+                    text='這是第二張卡片的內容',
+                    actions=[
+                        PostbackAction(
+                            label='這是PostbackAction',
+                            display_text='卡片 2 回應文字',
+                            data='卡片2_實際資料'
+                        ),
+                        MessageAction(
+                            label='這是MessageAction',
+                            text='卡片2_回應資料'
+                        ),
+                        URIAction(
+                            label='這是URIAction',
+                            uri='https://en.wikipedia.org/wiki/Coffee'
+                        )
+                    ]
                 )
             ]
         )
-    
-        # 將 TemplateSendMessage 傳送給用戶
+
+        # 封裝為 TemplateSendMessage
         template_message = TemplateSendMessage(
-            alt_text='這是按鈕樣板訊息',  # 當裝置不支援圖文消息時的替代文字
-            template=template
+            alt_text='這是旋轉木馬樣板訊息',
+            template=carousel_template
         )
-        
+
+        # 傳送訊息給用戶
         line_bot_api.reply_message(event.reply_token, template_message)
 
 
