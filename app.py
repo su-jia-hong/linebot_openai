@@ -127,6 +127,7 @@ def payment(user_id):
             
             # 確認訂單並推送到 Google Sheets
             order_confirmation = confirm_order(user_id, table_number)
+            print(f"[LOG] 訂單確認結果: {order_confirmation}")
 
             if order_confirmation["message"].startswith("訂單已確認"):
                 return f"<h1>付款成功！總金額為 {total_amount} 元</h1><p>{order_confirmation['message']}</p>"
@@ -199,6 +200,9 @@ def confirm_order(user_id, table_number=""):
                 cart_summary[item['品項']]['數量'] += 1
             else:
                 cart_summary[item['品項']] = {'價格': item['價格'], '數量': 1}
+
+        print(f"[LOG] 整理後的 cart_summary: {cart_summary}")
+        print(f"[LOG] 目前購物車總金額: {sum(item['價格'] * details['數量'] for item_name, details in cart_summary.items())}")
 
         # 整理餐點內容為字符串
         cart_items_str = ', '.join([f"{item_name} x{details['數量']}" for item_name, details in cart_summary.items()])
